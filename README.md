@@ -1,6 +1,9 @@
 # job-application-follow-up-assistant
 A script that regularly checks my Google Sheets, where I track the status of job applications, and sends me email reminders to follow up.
 
+## Prerequisites
+- Python >= 3.12.2
+
 ## Environment Variables
 
 This project utilizes environment variables for configuration. Inside the `.env` file, you will find the necessary files for setting up your environment.
