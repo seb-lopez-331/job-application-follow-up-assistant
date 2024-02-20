@@ -3,6 +3,8 @@ A script that regularly checks my Google Sheets, where I track the status of job
 
 ## Environment Variables
 
-This project utilizes environment variables for configuration. Inside the `env` directory, you will find the necessary files for setting up your environment.
+This project utilizes environment variables for configuration. Inside the `.env` file, you will find the necessary files for setting up your environment.
 
-If you require access to the API key or any other sensitive information, please contact me directly, and I will provide you with the necessary credentials.
+This repository offers a `.env.template` file with an overview of the variables that are placed inside of the `.env` file.
+
+If you require access to the API key or any other sensitive information, please contact me directly, and I will provide you with the `.env` file.
