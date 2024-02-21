@@ -43,7 +43,9 @@ def setup_client():
 
     # Create a new client with these scoped credentials
     client = gspread.authorize(creds_with_scope)
+ 
     return client
+
 
 def read_spreadsheets_into_dataframe(url):
     """
@@ -73,6 +75,7 @@ def read_spreadsheets_into_dataframe(url):
     # Convert the JSON records into a pandas DataFrame
     records_df = pd.DataFrame.from_dict(records_data)
     return records_df
+
 
 def find_people_to_follow_up(df):
     """
@@ -113,6 +116,7 @@ def find_people_to_follow_up(df):
     df.query(f'Last_Spoken_On == {fmt_week_ago} and Status == "" and (Recruiter != "" or Hiring_Manager != "")', inplace=True)
 
     return df
+
 
 def send_reminder_emails(df):
     """
@@ -179,6 +183,7 @@ def send_reminder_emails(df):
             # Send the mail
             server.login(email, password)
             server.sendmail(email, email, message.as_string())
+
 
 if __name__ == "__main__":
     """
