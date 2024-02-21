@@ -25,7 +25,7 @@ Secondly run crontab
 
 Inside your crontab, add something like:
 
-`0 9 * * * python3 main.py`
+`0 9 * * * cd /home/seblopez331/job-application-follow-up-assistant && python3 main.py`
 
 at the end of the crontab file.
 
@@ -34,4 +34,4 @@ for different cron commands.
 
 ## Important Note
 
-Configure your own app password on gmail. Put that in your .env
+Configure your own app password on gmail. Put that in your .env.
