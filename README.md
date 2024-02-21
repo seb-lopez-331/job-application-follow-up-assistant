@@ -20,6 +20,7 @@ First, we would like to install our required dependencies using pip. We can do t
 `./pre-script.sh`
 
 Secondly run something like:
+
 `crontab -e`
 
 
