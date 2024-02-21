@@ -11,3 +11,7 @@ This project utilizes environment variables for configuration. Inside the `.env`
 This repository offers a `.env.template` file with an overview of the variables that are placed inside of the `.env` file.
 
 If you require access to the API key or any other sensitive information, please contact me directly, and I will provide you with the `.env` file.
+
+## Important Note
+
+Configure your own app password on gmail. Put that in your .env

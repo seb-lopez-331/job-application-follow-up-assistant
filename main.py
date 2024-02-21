@@ -1,9 +1,14 @@
 from google.oauth2 import service_account
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
+from email.message import EmailMessage
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import pandas as pd
 import gspread
 import json
 import os
+import smtplib, ssl
 
 def setup_client():
     """
@@ -69,6 +74,82 @@ def read_spreadsheets_into_dataframe(url):
     records_df = pd.DataFrame.from_dict(records_data)
     return records_df
 
+def find_people_to_follow_up(df):
+    # Replace blank spaces with0 '_'
+    df.columns = [column.replace(" ", "_") for column in df.columns] 
+
+    # After converting the first row to column names, the index of the DataFrame will be
+    # off by one. To fix this, we use the .reset_index method
+    df = df.reset_index(drop=True)
+
+    # Grab today's date to determine the date it was a week ago
+    now = datetime.now()
+    week_ago = now - timedelta(days=7)
+
+    # Format 'week_ago' to match the date format (mm/dd/yyyy) in the dataset
+    fmt_week_ago = week_ago.strftime("%m/%d/%y")
+    print(df.columns)
+
+    # Find all jobs where your last communications with the hiring team was one week ago
+    # This way, we provide a notification that one week has been up, and it's therefore
+    # a good time to reach out.
+    df.query(f'Last_Spoken_On == {fmt_week_ago} and Status == "" and (Recruiter != "" or Hiring_Manager != "")', inplace=True)
+
+    return df
+
+def send_reminder_emails(df):
+    # Configure SSL port
+    port = 465
+
+    # Pull out your email credentials from .env file
+    email = os.environ['EMAIL_ADDRESS']
+    password = os.environ['APP_PASSWORD']
+
+    # Create a secure SSL context
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
+        server.login(email, password)
+
+        # Send email reminders to follow up
+        # Note: the reminders will be sent by your own email address
+        for index, row in df.iterrows():
+            # Parse the information
+            recruiter = row.iloc[1]
+            hiring_manager = row.iloc[4]
+            company = row.iloc[5]
+            role = row.iloc[6]
+
+            # Contact will either be the recruiter or hiring manager
+            contact = recruiter or hiring_manager
+
+            # Construct the message metadata
+            message = MIMEMultipart()
+            message["Subject"] = f'Follow-Up Reminder: Job Application Status of {role}, {company}'
+            message["From"] = "Job Application Follow-Up Assistant"
+            message["To"] = email
+
+            # Create the plain text message
+            text = """
+            Hey %s,
+
+            Hoping all is well! According to our databases, it's been a week since you've last
+            contacted %s. Please follow up with them on the status of your application to
+            %s at %s.
+            
+            Thanks,
+            Your Faithful Follow-Up Assistant
+            """ % (email, contact, role, company)
+            
+            # Turn the text into plain a MIMEText object
+            part = MIMEText(text, "plain")
+
+            # Add the part to the message
+            message.attach(part)
+
+            # Send the mail
+            server.login(email, password)
+            server.sendmail(email, email, message.as_string())
+
 if __name__ == "__main__":
     # Load environment
     load_dotenv()
@@ -80,5 +161,9 @@ if __name__ == "__main__":
     spreadsheet_url = os.environ['SPREADSHEET_URL']
     records_df = read_spreadsheets_into_dataframe(spreadsheet_url)
     
-    print(records_df)
+    # Filter out data to only return the people we might wish to follow up with
+    filtered_df = find_people_to_follow_up(records_df)
+
+    # Send reminder emails
+    send_reminder_emails(filtered_df)
 
