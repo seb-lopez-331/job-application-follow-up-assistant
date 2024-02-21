@@ -16,10 +16,13 @@ If you require access to the API key or any other sensitive information, please 
 ## How to use
 
 First, we would like to install our required dependencies using pip. We can do this by running the following:
+
 `./pre-script.sh`
 
 Secondly run something like:
 `crontab -e`
+
+
 `0 9 * * * python3 main.py`
 
 This will run your script every day at 9:00 AM. If you wish to configure it for another time or frequency, experiment with the crontab guru https://crontab.guru/
