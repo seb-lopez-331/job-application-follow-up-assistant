@@ -3,6 +3,7 @@ A script that regularly checks my Google Sheets, where I track the status of job
 
 ## Prerequisites
 - Python >= 3.12.2
+- crontab
 
 ## Environment Variables
 
@@ -11,6 +12,18 @@ This project utilizes environment variables for configuration. Inside the `.env`
 This repository offers a `.env.template` file with an overview of the variables that are placed inside of the `.env` file.
 
 If you require access to the API key or any other sensitive information, please contact me directly, and I will provide you with the `.env` file.
+
+## How to use
+
+First, we would like to install our required dependencies using pip. We can do this by running the following:
+`./pre-script.sh`
+
+Secondly run something like:
+`crontab -e`
+`0 9 * * * python3 main.py`
+
+This will run your script every day at 9:00 AM. If you wish to configure it for another time or frequency, experiment with the crontab guru https://crontab.guru/
+for different cron commands.
 
 ## Important Note
 
