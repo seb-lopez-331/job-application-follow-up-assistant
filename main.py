@@ -75,6 +75,23 @@ def read_spreadsheets_into_dataframe(url):
     return records_df
 
 def find_people_to_follow_up(df):
+    """
+    Find people to follow up based on specific criteria.
+
+    Args:
+        df (pandas.DataFrame): Input DataFrame containing job application data.
+
+    Returns:
+        pandas.DataFrame: DataFrame containing rows that meet the criteria for follow-up.
+
+    Notes:
+        - The function assumes that the input DataFrame has columns representing various attributes of job applications,
+          such as 'Last_Spoken_On', 'Status', 'Recruiter', and 'Hiring_Manager'.
+        - It filters the DataFrame based on the following criteria:
+          1. 'Last_Spoken_On' matches the date one week ago.
+          2. 'Status' is empty (indicating no recent update).
+          3. Either 'Recruiter' or 'Hiring_Manager' is not empty (indicating a contact person is available).
+    """
     # Replace blank spaces with0 '_'
     df.columns = [column.replace(" ", "_") for column in df.columns] 
 
@@ -98,6 +115,19 @@ def find_people_to_follow_up(df):
     return df
 
 def send_reminder_emails(df):
+    """
+    Send reminder emails to follow up on job applications.
+
+    Args:
+        df (pandas.DataFrame): DataFrame containing job application data.
+
+    Notes:
+        - The function assumes that the input DataFrame has columns representing various attributes of job applications,
+          such as 'Recruiter', 'Hiring_Manager', 'Company', and 'Role'.
+        - It pulls out email credentials from environment variables (EMAIL_ADDRESS and APP_PASSWORD).
+        - It sends reminder emails for each row in the DataFrame, using the recruiter or hiring manager as the contact.
+        - The subject and content of the email are personalized based on the job application details.
+    """
     # Configure SSL port
     port = 465
 
@@ -151,6 +181,17 @@ def send_reminder_emails(df):
             server.sendmail(email, email, message.as_string())
 
 if __name__ == "__main__":
+    """
+    Main block of the script responsible for executing the workflow.
+
+    Notes:
+        - This block is executed when the script is run as the main program.
+        - It loads environment variables using dotenv.
+        - It sets up a client with scoped credentials for accessing Google Sheets.
+        - It reads data from a specified spreadsheet URL into a DataFrame.
+        - It filters the DataFrame to identify people to follow up with based on specific criteria.
+        - It sends reminder emails to the identified contacts.
+    """
     # Load environment
     load_dotenv()
 
