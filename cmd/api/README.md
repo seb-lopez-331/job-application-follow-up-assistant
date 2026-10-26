@@ -6,7 +6,7 @@
 ## Job Applications
 These define the API endpoints for registered job applications.
 | Method | Endpoint | Purpose | Returns |
-| -------| -------- | ------- | ======= |
+| -------| -------- | ------- | ------- |
 | `POST` | `/api/v1/applications` | Register a job application | `201`, `400`, `401`, `403`, `409` |
 | `GET` | `/api/v1/applications` | List job applications with filters | `200`, `401`, `403` |
 | `GET` | `/api/v1/applications/{id}` | Get job application by ID | `200`, `401`, `403`, `404` |
