@@ -2,6 +2,7 @@
 # API Contract
 
 ## Job Applications
+These define the API endpoints for registered job applications.
 | Method | Endpoint | Purpose |
 | -------| -------- | ------- |
 | `POST` | `/api/v1/applications` | Register a job application |
@@ -93,12 +94,12 @@ Response:
 }
 ```
 
-Request:
+Request with filter:
 ```
 GET /api/v1/applications?status=interviewing
 ```
 
-Response:
+Response with filter:
 ```
 200 OK
 {
@@ -117,7 +118,7 @@ Response:
 }
 ```
 
-### Get one job application
+### Get job application by ID
 Request:
 ```
 GET /api/v1/applications/5213fcaf-15ea-4892-8419-d0d7077ebe16
@@ -211,7 +212,8 @@ Response After (Acme gone):
 }
 ```
 
-## Follow-ups
+## Job Application Follow-ups
+These define the API endpoints for job application follow-ups.
 | Method | Endpoint | Purpose |
 | -------| -------- | ------- |
 | `POST` | `/api/v1/applications/{id}/follow-ups` | Schedule a follow-up |
@@ -226,6 +228,7 @@ support ?due=overdue, ?due=today, and ?status=pending.
 ```
 
 ## Dashboard and AI
+These define the API endpoints for the dashboard and AI-integrated message generation.
 | Method | Endpoint | Purpose |
 | ------ | -------- | ------- |
 | `GET` | `/api/v1/dashboard` | Return application counts and today's tasks |
