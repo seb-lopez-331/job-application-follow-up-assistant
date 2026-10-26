@@ -193,7 +193,7 @@ Updates the job application's fields to what's specified in the input JSON. Retu
 
 #### Fields Specification
 | Field | Type  | Description |
-| :--- | :--- | :---: |
+| :--- | :--- | :--- |
 | `applied_on` | String | The day when the user applied to the job. |
 | `company_name` | String | The name of the company the user is applying to. |
 | `location` | String |  Where the job will be performed. |
