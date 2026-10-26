@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username TEXT NOT NULL UNIQUE,
@@ -35,7 +37,7 @@ CREATE TABLE jobs (
     updated_at TIMESTAMPZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE activity (
+CREATE TABLE activities (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     action_type TEXT NOT NULL CHECK (
         action_type IN (
@@ -47,7 +49,8 @@ CREATE TABLE activity (
             'application_rejected'
         )
     ),
-    time_logged TIMESTAMPTZ NOT NULL DEFAULT now(),
+    details JSONB NOT NULL DEFAULT '{}'::jsonb,
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -63,11 +66,17 @@ CREATE TABLE contacts (
 
 CREATE TABLE follow_ups (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    job_application_id UUID NOT NULL REFERENCES job_applications(id)
-        ON DELETE CASCADE,
-    due_date TIMESTAMPTZ NOT NULL,
+    job_application_id UUID NOT NULL
+        REFERENCES job_applications(id) ON DELETE CASCADE,
+    due_on TIMESTAMPTZ NOT NULL,
     message_draft TEXT,
-    was_sent BOOLEAN NOT NULL DEFAULT false,
+    follow_up_status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN (
+            'pending', 'completed', 'cancelled'
+        )),
+    sent_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 )
@@ -116,7 +125,7 @@ CREATE TABLE job_application_activities (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_application_id UUID NOT NULL REFERENCES job_applications(id)
         ON DELETE CASCADE,
-    activity_id UUID NOT NULL REFERENCES activity(id)
+    activity_id UUID NOT NULL REFERENCES activities(id)
         ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -129,3 +138,16 @@ CREATE TABLE job_application_follow_ups (
         ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX idx_applications_user_status
+    ON applications (user_id, status);
+
+CREATE INDEX idx_applications_user_follow_up
+    ON applications (user_id, next_follow_up_on);
+
+CREATE INDEX idx_follow_ups_due
+    ON follow_ups (due_on)
+    WHERE status = 'pending';
+
+CREATE INDEX idx_activities_application_time
+    ON activities (application_id, occurred_at DESC);
