@@ -228,12 +228,164 @@ support ?due=overdue, ?due=today, and ?status=pending.
 ```
 
 ### Schedule a follow-up
+Request:
+```
+POST /api/v1/applications/8e34296b-ef82-4d6a-9b1f-30c49e3f0c11/follow-ups
+{
+  "due_on": "2026-11-04"
+}
+```
+
+Response:
+```
+201 Created
+{
+  "data": {
+    "id": "c66a3e81-27c0-4b10-b47d-b1f3b2f20b31",
+    "application_id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
+    "due_on": "2026-11-04",
+    "status": "pending",
+    "message_draft": null,
+    "sent_at": null,
+    "completed_at": null
+  }
+}
+```
 
 ### List pending or due follow-ups
+Request:
+```
+GET /api/v1/follow-ups
+```
 
-### Get a specific follow up
+Response:
+```
+200 OK
+{
+    "data": [
+        {
+            "id": "c66a3e81-27c0-4b10-b47d-b1f3b2f20b31",
+            "application_id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
+            "due_on": "2026-11-04",
+            "status": "pending",
+            "message_draft": null,
+            "sent_at": null,
+            "completed_at": null
+        },
+        {
+            "id": "3c12c4f2-e79e-4f16-bca9-a50273fc7e16",
+            "application_id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
+            "due_on": "2026-11-10",
+            "status": "pending",
+            "message_draft": null,
+            "sent_at": null,
+            "completed_at": null
+        },        
+        {
+            "id": "e9e4c11e-16cf-49e8-96a6-d453d030c233",
+            "application_id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
+            "due_on": "2026-10-31",
+            "status": "pending",
+            "message_draft": null,
+            "sent_at": null,
+            "completed_at": null
+        },
+    ]
+}
+```
+
+### Get a specific follow up by ID
+Request:
+```
+GET /api/v1/follow-ups/3c12c4f2-e79e-4f16-bca9-a50273fc7e16
+```
+
+Response:
+```
+200 OK
+{
+    "data":  {
+        "id": "3c12c4f2-e79e-4f16-bca9-a50273fc7e16",
+        "application_id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
+        "due_on": "2026-11-10",
+        "status": "pending",
+        "message_draft": null,
+        "sent_at": null,
+        "completed_at": null
+    }
+}
+```
+
+### Reschedule or update a follow-up
+Request:
+```
+PATCH /api/v1/follow-ups/e9e4c11e-16cf-49e8-96a6-d453d030c233
+{
+    "due_on": "2026-12-01"
+}
+```
+
+Response:
+```
+200 OK
+{
+    "data": {
+        "id": "e9e4c11e-16cf-49e8-96a6-d453d030c233",
+        "application_id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
+        "due_on": "2026-12-01",
+        "status": "pending",
+        "message_draft": null,
+        "sent_at": null,
+        "completed_at": null
+    }
+}
+```
+
+Request:
+```
+PATCH /api/v1/follow-ups/e9e4c11e-16cf-49e8-96a6-d453d030c233
+{
+    "message_draft": "Hi Recruiter, Hope this week has been treating you well. Please hire me, I desperately need the money and my girlfriend that I worked so hard to impress will leave me if I don't buy her a Louis Vuitton purse."
+}
+```
+
+Response:
+```
+200 OK
+{
+    "data": {
+        "id": "e9e4c11e-16cf-49e8-96a6-d453d030c233",
+        "application_id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
+        "due_on": "2026-12-01",
+        "status": "cancelled",
+        "message_draft": "Hi Recruiter, Hope this week has been treating you well. Please hire me, I desperately need the money and my girlfriend that I worked so hard to impress will leave me if I don't buy her a Louis Vuitton purse.",
+        "sent_at": null,
+        "completed_at": null
+    }
+}
+```
 
 ### Mark follow-up as complete
+Request:
+```
+POST /api/v1/follow-ups/e9e4c11e-16cf-49e8-96a6-d453d030c233/complete
+```
+
+Response:
+```
+200 OK
+{
+    "data": {
+        "id": "e9e4c11e-16cf-49e8-96a6-d453d030c233",
+        "application_id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
+        "due_on": "2026-12-01",
+        "status": "cancelled",
+        "message_draft": "Hi Recruiter, Hope this week has been treating you well. Please hire me, I desperately need the money and my girlfriend that I worked so hard to impress will leave me if I don't buy her a Louis Vuitton purse.",
+        "sent_at": null,
+        "completed_at": "2026-12-01T13:23:00Z"
+    }
+}
+```
 
 ## Dashboard and AI
 These define the API endpoints for the dashboard and AI-integrated message generation.
