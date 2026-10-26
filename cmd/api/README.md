@@ -227,6 +227,14 @@ Supports the following list filters
 support ?due=overdue, ?due=today, and ?status=pending.
 ```
 
+### Schedule a follow-up
+
+### List pending or due follow-ups
+
+### Get a specific follow up
+
+### Mark follow-up as complete
+
 ## Dashboard and AI
 These define the API endpoints for the dashboard and AI-integrated message generation.
 | Method | Endpoint | Purpose |
@@ -235,3 +243,7 @@ These define the API endpoints for the dashboard and AI-integrated message gener
 | `POST` | `/api/v1/applications/{id}/generate-follow-up` | Generate a message draft |
 
 Note: Implement the dashboard and message-generation endpoints after the basic CRUD and scheduling flows work. They depend on those underlying capabilities.
+
+### Return application counts and today's tasks
+
+### Generates a message draft
