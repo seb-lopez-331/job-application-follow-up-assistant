@@ -1,5 +1,5 @@
 # job-application-follow-up-assistant
-A script that regularly checks my Google Sheets, where I track the status of job applications, and sends me email reminders to follow up.
+Tracks statuses of job applications, and provides reminders to follow up.
 
 ## Prerequisites
 - Python >= 3.12.2
@@ -31,6 +31,7 @@ at the end of the crontab file.
 
 This will run your script every day at 9:00 AM. If you wish to configure it for another time or frequency, experiment with the crontab guru https://crontab.guru/
 for different cron commands.
+
 
 ## Important Note
 
