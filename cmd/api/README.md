@@ -1,34 +1,64 @@
 
 # API Contract
 
+
+
 ## Job Applications
 These define the API endpoints for registered job applications.
-| Method | Endpoint | Purpose |
-| -------| -------- | ------- |
-| `POST` | `/api/v1/applications` | Register a job application |
-| `GET` | `/api/v1/applications` | List job applications with filters |
-| `GET` | `/api/v1/applications/{id}` | Get one job application |
-| `PATCH` | `/api/v1/applications/{id}` | Update selected fields |
-| `DELETE` | `/api/v1/applications/{id}` | Unregister a job application |
-
-List filters:
-```
-?stage=applied&search=platform&limit=20&cursor=...
-```
+| Method | Endpoint | Purpose | Returns |
+| -------| -------- | ------- | ======= |
+| `POST` | `/api/v1/applications` | Register a job application | `201`, `400`, `401`, `403`, `409` |
+| `GET` | `/api/v1/applications` | List job applications with filters | `200`, `401`, `403` |
+| `GET` | `/api/v1/applications/{id}` | Get job application by ID | `200`, `401`, `403`, `404` |
+| `PATCH` | `/api/v1/applications/{id}` | Update selected fields | `200`, `400`, `401`, `403`, `404` |
+| `DELETE` | `/api/v1/applications/{id}` | Unregister a job application | `204`, `401`, `403`, `404` |
 
 ### Register a job application
-Request:
+Registers a job application into the database. Returns `201 Created` or `400 Bad Request` if the client is authenticated and the database has no such job, depending on whether the JSON is passed in with the following structure:
+
+```json
+{
+    "user": "johndoe",
+    "company_name": "Acme",
+    "role_title": "Platform Engineer",
+    "job_url": "https://example.com/jobs/123",
+    "location": "Remote, US",
+    "work_arrangement": "remote",
+    "status": "applied",
+    "applied_on": "2026-10-26",
+    "notes": "Interested in the infrastructure team."
+}
+```
+
+#### Fields Specification
+| Field | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `applied_on` | String | Yes | The day when the user applied to the job. |
+| `company_name` | String | Yes | The name of the company the user is applying to. |
+| `location` | String | Yes | Where the job will be performed. |
+| `role_title` | String | Yes | The name of the role the user is applying to. |
+| `user` | String | Yes | The user's username. |
+| `work_arrangement` | String | Yes | Accepts the values of `remote`, `hybrid`, or `on-site`. |
+| `description` | String | No | The description of the job the user is applying to. |
+| `notes` | String | No | Any notes the user may record about the job. |
+| `job_url` | String | No | The URL of the job posting. |
+| `posted_at` | String | No | The date when the job was posted. |
+| `status` | String | No | The status of the job application. Defaults to `applied`. |
+
+Returns `401 Unauthorized` if the client is unauthenticated. Returns `403 Forbidden` if the client makes a request for a different user, unless the client is an admin. Returns `409 Conflict` if a job application with a matching user, company name, and role title are already in the database.
+
 ```
 POST /api/v1/applications
 {
-  "company_name": "Acme",
-  "role_title": "Platform Engineer",
-  "job_url": "https://example.com/jobs/123",
-  "location": "Remote, US",
-  "work_arrangement": "remote",
-  "status": "applied",
-  "applied_on": "2026-10-26",
-  "notes": "Interested in the infrastructure team."
+    "user": "johndoe",
+    "company_name": "Acme",
+    "role_title": "Platform Engineer",
+    "job_url": "https://example.com/jobs/123",
+    "location": "Remote, US",
+    "work_arrangement": "remote",
+    "status": "applied",
+    "applied_on": "2026-10-26",
+    "notes": "Interested in the infrastructure team."
 }
 ```
 
@@ -38,6 +68,7 @@ Response:
 {
   "data": {
     "id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
+    "user": "johndoe",
     "company_name": "Acme",
     "role_title": "Platform Engineer",
     "status": "applied",
@@ -50,6 +81,14 @@ Response:
 ```
 
 ### List job applications with filters
+Lists all job applications registered with the user, or all users if the user is an admin. If query parameters are specified, the list can be filtered by job application stage, job role title, number of entries, and so forth:
+
+```
+/api/v1/applications?stage=applied&search=platform&limit=20&cursor=...
+```
+
+Additionally, users can filter the list by user. Returns `200 OK` if client is authenticated, `401 Unauthorized` otherwise, and `403 Forbidden` if the client tries to filter by a different username.
+
 Request:
 ```
 GET /api/v1/applications
@@ -62,6 +101,7 @@ Response:
     "data": [
         {
             "id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
+            "user": "johndoe",
             "company_name": "Acme",
             "role_title": "Platform Engineer",
             "status": "applied",
@@ -72,6 +112,7 @@ Response:
         },
         {
             "id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
+            "user": "johndoe",
             "company_name": "CloudCo",
             "role_title": "Software Engineer",
             "status": "applied",
@@ -82,6 +123,7 @@ Response:
         },
         {
             "id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
+            "user": "johndoe",
             "company_name": "DataWorks",
             "role_title": "Infrastructure SWE",
             "status": "interviewing",
@@ -106,6 +148,7 @@ Response with filter:
     "data": [
         {
             "id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
+            "user": "johndoe",
             "company_name": "DataWorks",
             "role_title": "Infrastructure SWE",
             "status": "interviewing",
@@ -119,6 +162,8 @@ Response with filter:
 ```
 
 ### Get job application by ID
+Looks up a registered application by its UUID. Returns `200 OK` if an application with the specified UUID is found for the user, `403 Forbidden` if a non-admin user attempts to lookup an application that doesn't belong to them, and a `404 Not Found` otherwise.
+
 Request:
 ```
 GET /api/v1/applications/5213fcaf-15ea-4892-8419-d0d7077ebe16
@@ -130,6 +175,7 @@ Response:
 {
   "data": {
     "id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
+    "user": "johndoe",
     "company_name": "CloudCo",
     "role_title": "Software Engineer",
     "status": "applied",
@@ -143,6 +189,24 @@ Response:
 ```
 
 ### Update selected fields
+Updates the job application's fields to what's specified in the input JSON. Returns `200 OK` only if there is at least one valid field in the JSON and no invalid fields, and a `400 Bad Request` otherwise. Here's a reference for the valid fields:
+
+#### Fields Specification
+| Field | Type  | Description |
+| :--- | :--- | :---: | :--- |
+| `applied_on` | String | The day when the user applied to the job. |
+| `company_name` | String | The name of the company the user is applying to. |
+| `location` | String |  Where the job will be performed. |
+| `role_title` | String |  The name of the role the user is applying to. |
+| `work_arrangement` | String | Accepts the values of `remote`, `hybrid`, or `on-site`. |
+| `description` | String | The description of the job the user is applying to. |
+| `notes` | String | Any notes the user may record about the job. |
+| `job_url` | String | The URL of the job posting. |
+| `posted_at` | String | The date when the job was posted. |
+| `status` | String | The status of the job application. Defaults to `applied`. |
+
+Returns `401 Unauthorized` if the client isn't authenticated, `403 Forbidden` if a non-admin user requests this for another user's job application, or `404 Not Found` if the job application ID cannot be found.
+
 Request:
 ```
 PATCH /api/v1/applications/8e34296b-ef82-4d6a-9b1f-30c49e3f0c11
@@ -157,6 +221,7 @@ Response:
 {
   "data": {
     "id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
+    "user": "johndoe",
     "company_name": "Acme",
     "role_title": "Platform Engineer",
     "status": "rejected",
@@ -169,6 +234,8 @@ Response:
 ```
 
 ### Unregister a job application
+Deletes a job application associated with the ID passed in the URL. Returns `204 No Content` only if an entry associated with that ID is found. Returns `401 Unauthorized` if the client isn't authenticated, `403 Forbidden` if a non-admin user requests to delete a job application associated with another user, and `404 Not Found` if no such job application matches the ID.
+
 Request (Delete Acme):
 ```
 DELETE /api/v1/applications/8e34296b-ef82-4d6a-9b1f-30c49e3f0c11
@@ -190,6 +257,7 @@ Response After (Acme gone):
     "data": [
         {
             "id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
+            "user": "johndoe",
             "company_name": "CloudCo",
             "role_title": "Software Engineer",
             "status": "applied",
@@ -200,6 +268,7 @@ Response After (Acme gone):
         },
         {
             "id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
+            "user": "johndoe",
             "company_name": "DataWorks",
             "role_title": "Infrastructure SWE",
             "status": "interviewing",
