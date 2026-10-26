@@ -3,7 +3,7 @@
 
 ## Job Applications
 | Method | Endpoint | Purpose |
-| - | - |
+| -------| -------- | ------- |
 | `POST` | `/api/v1/applications` | Register a job application |
 | `GET` | `/api/v1/applications` | List job applications with filters |
 | `GET` | `/api/v1/applications/{id}` | Get one job application |
@@ -213,7 +213,7 @@ Response After (Acme gone):
 
 ## Follow-ups
 | Method | Endpoint | Purpose |
-| - | - |
+| -------| -------- | ------- |
 | `POST` | `/api/v1/applications/{id}/follow-ups` | Schedule a follow-up |
 | `GET` | `/api/v1/follow-ups` | List pending or due follow-ups |
 | `GET` | `/api/v1/follow-ups/{id}` | Get a specific follow-up |
@@ -227,7 +227,7 @@ support ?due=overdue, ?due=today, and ?status=pending.
 
 ## Dashboard and AI
 | Method | Endpoint | Purpose |
-| - | - |
+| ------ | -------- | ------- |
 | `GET` | `/api/v1/dashboard` | Return application counts and today's tasks |
 | `POST` | `/api/v1/applications/{id}/generate-follow-up` | Generate a message draft |
 
