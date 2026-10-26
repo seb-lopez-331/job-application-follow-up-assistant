@@ -397,5 +397,73 @@ These define the API endpoints for the dashboard and AI-integrated message gener
 Note: Implement the dashboard and message-generation endpoints after the basic CRUD and scheduling flows work. They depend on those underlying capabilities.
 
 ### Return application counts and today's tasks
+Request:
+```
+GET /api/v1/dashboard
+```
+
+Response:
+```
+{
+    "data": {
+        "applied": 24,
+        "follow_up": 5,
+        "interviews": 3,
+        "applications": [
+            {
+                "id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
+                "company_name": "Acme",
+                "role_title": "Platform Engineer",
+                "status": "applied",
+                "applied_on": "2026-10-26",
+                "next_follow_up_on": "2026-11-04",
+                "created_at": "2026-10-26T16:00:00Z",
+                "updated_at": "2026-10-26T16:00:00Z"
+            },
+            {
+                "id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
+                "company_name": "CloudCo",
+                "role_title": "Software Engineer",
+                "status": "applied",
+                "applied_on": "2026-10-22",
+                "next_follow_up_on": "2026-10-29",
+                "created_at": "2026-10-22T12:59:00Z",
+                "updated_at": "2026-10-22T12:59:00Z"
+            },
+            {
+                "id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
+                "company_name": "DataWorks",
+                "role_title": "Infrastructure SWE",
+                "status": "interviewing",
+                "applied_on": "2026-10-24",
+                "next_follow_up_on": "2026-10-31",
+                "created_at": "2026-10-24T13:23:00Z",
+                "updated_at": "2026-10-24T13:23:00Z"
+            }
+        ], ...
+    }
+}
+
+```
 
 ### Generates a message draft
+Request:
+```
+POST /api/v1/applications/8e34296b-ef82-4d6a-9b1f-30c49e3f0c11/generate-follow-up
+{
+  "tone": "professional",
+  "context": "I spoke with the recruiter last week."
+}
+```
+
+Response:
+```
+200 OK
+{
+  "data": {
+    "application_id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
+    "message_draft": "Hi [Recruiter Name], ...",
+    "generated_at": "2026-10-26T16:00:00Z"
+  }
+}
+```
