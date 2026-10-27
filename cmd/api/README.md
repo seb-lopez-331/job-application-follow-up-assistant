@@ -18,7 +18,6 @@ Registers a job application into the database. Returns `201 Created` or `400 Bad
 
 ```json
 {
-    "user": "johndoe",
     "company_name": "Acme",
     "role_title": "Platform Engineer",
     "job_url": "https://example.com/jobs/123",
@@ -37,20 +36,22 @@ Registers a job application into the database. Returns `201 Created` or `400 Bad
 | `company_name` | String | Yes | The name of the company the user is applying to. |
 | `location` | String | Yes | Where the job will be performed. |
 | `role_title` | String | Yes | The name of the role the user is applying to. |
-| `user` | String | Yes | The user's username. |
 | `work_arrangement` | String | Yes | Accepts the values of `remote`, `hybrid`, or `on-site`. |
 | `description` | String | No | The description of the job the user is applying to. |
 | `notes` | String | No | Any notes the user may record about the job. |
 | `job_url` | String | No | The URL of the job posting. |
 | `posted_at` | String | No | The date when the job was posted. |
 | `status` | String | No | The status of the job application. Defaults to `applied`. |
+| `user` | String | Admin-only | The user's username. |
 
 Returns `401 Unauthorized` if the client is unauthenticated. Returns `403 Forbidden` if the client makes a request for a different user, unless the client is an admin. Returns `409 Conflict` if a job application with a matching user, company name, and role title are already in the database.
 
+Note that the user field shoud only be visible in the response when an admin is making a request.
+
+Request:
 ```
 POST /api/v1/applications
 {
-    "user": "johndoe",
     "company_name": "Acme",
     "role_title": "Platform Engineer",
     "job_url": "https://example.com/jobs/123",
@@ -65,6 +66,43 @@ POST /api/v1/applications
 Response:
 ```
 201 Created
+{
+  "data": {
+    "id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
+    "company_name": "Acme",
+    "role_title": "Platform Engineer",
+    "status": "applied",
+    "applied_on": "2026-10-26",
+    "next_follow_up_on": "2026-11-04",
+    "created_at": "2026-10-26T16:00:00Z",
+    "updated_at": "2026-10-26T16:00:00Z"
+  }
+}
+```
+
+Admin Request:
+```
+POST /api/v1/applications
+{
+    "user": "johndoe"
+    "company_name": "Acme",
+    "role_title": "Platform Engineer",
+    "job_url": "https://example.com/jobs/123",
+    "location": "Remote, US",
+    "work_arrangement": "remote",
+    "status": "applied",
+    "applied_on": "2026-10-26",
+    "notes": "Interested in the infrastructure team."
+}
+```
+
+Non-Admin Response:
+```
+403 Forbidden
+```
+
+Admin Response:
+```
 {
   "data": {
     "id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
@@ -101,7 +139,6 @@ Response:
     "data": [
         {
             "id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
-            "user": "johndoe",
             "company_name": "Acme",
             "role_title": "Platform Engineer",
             "status": "applied",
@@ -112,7 +149,6 @@ Response:
         },
         {
             "id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
-            "user": "johndoe",
             "company_name": "CloudCo",
             "role_title": "Software Engineer",
             "status": "applied",
@@ -123,7 +159,6 @@ Response:
         },
         {
             "id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
-            "user": "johndoe",
             "company_name": "DataWorks",
             "role_title": "Infrastructure SWE",
             "status": "interviewing",
@@ -148,7 +183,6 @@ Response with filter:
     "data": [
         {
             "id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
-            "user": "johndoe",
             "company_name": "DataWorks",
             "role_title": "Infrastructure SWE",
             "status": "interviewing",
@@ -175,7 +209,6 @@ Response:
 {
   "data": {
     "id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
-    "user": "johndoe",
     "company_name": "CloudCo",
     "role_title": "Software Engineer",
     "status": "applied",
@@ -221,7 +254,6 @@ Response:
 {
   "data": {
     "id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
-    "user": "johndoe",
     "company_name": "Acme",
     "role_title": "Platform Engineer",
     "status": "rejected",
@@ -257,7 +289,6 @@ Response After (Acme gone):
     "data": [
         {
             "id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
-            "user": "johndoe",
             "company_name": "CloudCo",
             "role_title": "Software Engineer",
             "status": "applied",
@@ -268,7 +299,6 @@ Response After (Acme gone):
         },
         {
             "id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
-            "user": "johndoe",
             "company_name": "DataWorks",
             "role_title": "Infrastructure SWE",
             "status": "interviewing",
@@ -281,15 +311,15 @@ Response After (Acme gone):
 }
 ```
 
-## Job Application Follow-ups
+## Job Application Follow-Ups
 These define the API endpoints for job application follow-ups.
-| Method | Endpoint | Purpose |
-| -------| -------- | ------- |
-| `POST` | `/api/v1/applications/{id}/follow-ups` | Schedule a follow-up |
-| `GET` | `/api/v1/follow-ups` | List pending or due follow-ups |
-| `GET` | `/api/v1/follow-ups/{id}` | Get a specific follow-up |
-| `PATCH` | `/api/v1/follow-ups/{id}` | Reschedule or update a follow-up |
-| `POST` | `/api/v1/follow-ups/{id}/complete` | Mark it completed |
+| Method | Endpoint | Purpose | Returns |
+| -------| -------- | ------- | ------- |
+| `POST` | `/api/v1/applications/{id}/follow-ups` | Schedule a follow-up | `201`, `400`, `401`, `403`, `409` |
+| `GET` | `/api/v1/follow-ups` | List pending or due follow-ups | `200`, `401`, `403` |
+| `GET` | `/api/v1/follow-ups/{id}` | Get a specific follow-up | `200`, `401`, `403` |
+| `PATCH` | `/api/v1/follow-ups/{id}` | Reschedule or update a follow-up | `200`, `400`, `401`, `403` |
+| `POST` | `/api/v1/follow-ups/{id}/complete` | Mark it completed | `201`, `400`, `401`, `403`, `409` |
 
 Supports the following list filters
 ```
@@ -297,6 +327,37 @@ support ?due=overdue, ?due=today, and ?status=pending.
 ```
 
 ### Schedule a follow-up
+Creates a follow up instance for a user's job application. Returns `201 Created` only if the the request body is a JSON passed in with the following structure:
+
+```json
+{
+    "id": "c66a3e81-27c0-4b10-b47d-b1f3b2f20b31",
+    "application_id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
+    "due_on": "2026-11-04",
+    "status": "pending",
+    "message_draft": null,
+    "sent_at": null,
+    "completed_at": null
+  }
+```
+
+#### Fields Specification
+| Field | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `applied_on` | String | Yes | The day when the user applied to the job. |
+| `company_name` | String | Yes | The name of the company the user is applying to. |
+| `location` | String | Yes | Where the job will be performed. |
+| `role_title` | String | Yes | The name of the role the user is applying to. |
+| `user` | String | Yes | The user's username. |
+| `work_arrangement` | String | Yes | Accepts the values of `remote`, `hybrid`, or `on-site`. |
+| `description` | String | No | The description of the job the user is applying to. |
+| `notes` | String | No | Any notes the user may record about the job. |
+| `job_url` | String | No | The URL of the job posting. |
+| `posted_at` | String | No | The date when the job was posted. |
+| `status` | String | No | The status of the job application. Defaults to `applied`. |
+
+Returns `401 Unauthorized` if the client is unauthenticated. Returns `403 Forbidden` if the client makes a request for a different user, unless the client is an admin. Returns `409 Conflict` if a job application with a matching user, company name, and role title are already in the database.
+
 Request:
 ```
 POST /api/v1/applications/8e34296b-ef82-4d6a-9b1f-30c49e3f0c11/follow-ups
