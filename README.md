@@ -30,7 +30,7 @@ exists for the same user, company, and role.
     "job_url": "https://example.com/jobs/123",
     "location": "Remote, US",
     "work_arrangement": "remote",
-    "status": "applied",
+    "stage": "applied",
     "applied_on": "2026-10-26",
     "notes": "Interested in the infrastructure team."
 }
@@ -63,7 +63,7 @@ POST /api/v1/applications
     "job_url": "https://example.com/jobs/123",
     "location": "Remote, US",
     "work_arrangement": "remote",
-    "status": "applied",
+    "stage": "applied",
     "applied_on": "2026-10-26",
     "notes": "Interested in the infrastructure team."
 }
@@ -77,7 +77,7 @@ Status: 201 Created
     "id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
     "company_name": "Acme",
     "role_title": "Platform Engineer",
-    "status": "applied",
+    "stage": "applied",
     "applied_on": "2026-10-26",
     "next_follow_up_on": "2026-11-04",
     "created_at": "2026-10-26T16:00:00Z",
@@ -96,7 +96,7 @@ POST /api/v1/applications
     "job_url": "https://example.com/jobs/123",
     "location": "Remote, US",
     "work_arrangement": "remote",
-    "status": "applied",
+    "stage": "applied",
     "applied_on": "2026-10-26",
     "notes": "Interested in the infrastructure team."
 }
@@ -116,7 +116,7 @@ Status: 201 Created
     "user": "johndoe",
     "company_name": "Acme",
     "role_title": "Platform Engineer",
-    "status": "applied",
+    "stage": "applied",
     "applied_on": "2026-10-26",
     "next_follow_up_on": "2026-11-04",
     "created_at": "2026-10-26T16:00:00Z",
@@ -162,7 +162,7 @@ Status: 200 OK
             "id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
             "company_name": "Acme",
             "role_title": "Platform Engineer",
-            "status": "applied",
+            "stage": "applied",
             "applied_on": "2026-10-26",
             "next_follow_up_on": "2026-11-04",
             "created_at": "2026-10-26T16:00:00Z",
@@ -172,7 +172,7 @@ Status: 200 OK
             "id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
             "company_name": "CloudCo",
             "role_title": "Software Engineer",
-            "status": "applied",
+            "stage": "applied",
             "applied_on": "2026-10-22",
             "next_follow_up_on": "2026-10-29",
             "created_at": "2026-10-22T12:59:00Z",
@@ -182,7 +182,7 @@ Status: 200 OK
             "id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
             "company_name": "DataWorks",
             "role_title": "Infrastructure SWE",
-            "status": "interviewing",
+            "stage": "interviewing",
             "applied_on": "2026-10-24",
             "next_follow_up_on": "2026-10-31",
             "created_at": "2026-10-24T13:23:00Z",
@@ -207,7 +207,7 @@ Status: 200 OK
             "id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
             "company_name": "DataWorks",
             "role_title": "Infrastructure SWE",
-            "status": "interviewing",
+            "stage": "interviewing",
             "applied_on": "2026-10-24",
             "next_follow_up_on": "2026-10-31",
             "created_at": "2026-10-24T13:23:00Z",
@@ -238,7 +238,7 @@ Status: 200 OK
     "id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
     "company_name": "CloudCo",
     "role_title": "Software Engineer",
-    "status": "applied",
+    "stage": "applied",
     "applied_on": "2026-10-22",
     "next_follow_up_on": "2026-10-29",
     "created_at": "2026-10-22T12:59:00Z",
@@ -274,7 +274,7 @@ Request:
 ```
 PATCH /api/v1/applications/8e34296b-ef82-4d6a-9b1f-30c49e3f0c11
 {
-  "status": "rejected"
+  "stage": "rejected"
 }
 ```
 
@@ -286,7 +286,7 @@ Status: 200 OK
     "id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
     "company_name": "Acme",
     "role_title": "Platform Engineer",
-    "status": "rejected",
+    "stage": "rejected",
     "applied_on": "2026-10-26",
     "next_follow_up_on": "2026-11-04",
     "created_at": "2026-10-26T16:00:00Z",
@@ -325,7 +325,7 @@ Follow-up response:
             "id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
             "company_name": "CloudCo",
             "role_title": "Software Engineer",
-            "status": "applied",
+            "stage": "applied",
             "applied_on": "2026-10-22",
             "next_follow_up_on": "2026-10-29",
             "created_at": "2026-10-22T12:59:00Z",
@@ -335,7 +335,7 @@ Follow-up response:
             "id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
             "company_name": "DataWorks",
             "role_title": "Infrastructure SWE",
-            "status": "interviewing",
+            "stage": "interviewing",
             "applied_on": "2026-10-24",
             "next_follow_up_on": "2026-10-31",
             "created_at": "2026-10-24T13:23:00Z",
@@ -390,7 +390,7 @@ Status: 201 Created
         "id": "c66a3e81-27c0-4b10-b47d-b1f3b2f20b31",
         "application_id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
         "due_on": "2026-11-04",
-        "status": "pending",
+        "stage": "pending",
         "message_draft": null,
         "sent_at": null,
         "completed_at": null
@@ -427,7 +427,7 @@ Status: 200 OK
             "id": "c66a3e81-27c0-4b10-b47d-b1f3b2f20b31",
             "application_id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
             "due_on": "2026-11-04",
-            "status": "pending",
+            "stage": "pending",
             "message_draft": null,
             "sent_at": null,
             "completed_at": null
@@ -436,7 +436,7 @@ Status: 200 OK
             "id": "3c12c4f2-e79e-4f16-bca9-a50273fc7e16",
             "application_id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
             "due_on": "2026-11-10",
-            "status": "pending",
+            "stage": "pending",
             "message_draft": null,
             "sent_at": null,
             "completed_at": null
@@ -445,7 +445,7 @@ Status: 200 OK
             "id": "e9e4c11e-16cf-49e8-96a6-d453d030c233",
             "application_id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
             "due_on": "2026-10-31",
-            "status": "pending",
+            "stage": "pending",
             "message_draft": null,
             "sent_at": null,
             "completed_at": null
@@ -474,7 +474,7 @@ Status: 200 OK
         "id": "3c12c4f2-e79e-4f16-bca9-a50273fc7e16",
         "application_id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
         "due_on": "2026-11-10",
-        "status": "pending",
+        "stage": "pending",
         "message_draft": null,
         "sent_at": null,
         "completed_at": null
@@ -513,7 +513,7 @@ Status: 200 OK
         "id": "e9e4c11e-16cf-49e8-96a6-d453d030c233",
         "application_id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
         "due_on": "2026-12-01",
-        "status": "pending",
+        "stage": "pending",
         "message_draft": null,
         "sent_at": null,
         "completed_at": null
@@ -537,7 +537,7 @@ Status: 200 OK
         "id": "e9e4c11e-16cf-49e8-96a6-d453d030c233",
         "application_id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
         "due_on": "2026-12-01",
-        "status": "pending",
+        "stage": "pending",
         "message_draft": "Hello [Recruiter Name], I hope you are doing well. I wanted to follow up on my application and ask whether there are any updates. Thank you for your time.",
         "sent_at": null,
         "completed_at": null
@@ -565,7 +565,7 @@ Status: 200 OK
         "id": "e9e4c11e-16cf-49e8-96a6-d453d030c233",
         "application_id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
         "due_on": "2026-12-01",
-        "status": "completed",
+        "stage": "completed",
         "message_draft": "Hello [Recruiter Name], I hope you are doing well. I wanted to follow up on my application and ask whether there are any updates. Thank you for your time.",
         "sent_at": null,
         "completed_at": "2026-12-01T13:23:00Z"
@@ -603,7 +603,7 @@ Status: 200 OK
                 "id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
                 "company_name": "Acme",
                 "role_title": "Platform Engineer",
-                "status": "applied",
+                "stage": "applied",
                 "applied_on": "2026-10-26",
                 "next_follow_up_on": "2026-11-04",
                 "created_at": "2026-10-26T16:00:00Z",
@@ -613,7 +613,7 @@ Status: 200 OK
                 "id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
                 "company_name": "CloudCo",
                 "role_title": "Software Engineer",
-                "status": "applied",
+                "stage": "applied",
                 "applied_on": "2026-10-22",
                 "next_follow_up_on": "2026-10-29",
                 "created_at": "2026-10-22T12:59:00Z",
@@ -623,7 +623,7 @@ Status: 200 OK
                 "id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
                 "company_name": "DataWorks",
                 "role_title": "Infrastructure SWE",
-                "status": "interviewing",
+                "stage": "interviewing",
                 "applied_on": "2026-10-24",
                 "next_follow_up_on": "2026-10-31",
                 "created_at": "2026-10-24T13:23:00Z",
