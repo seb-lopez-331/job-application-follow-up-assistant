@@ -714,13 +714,13 @@ password, and profile details:
 The password must be salted and hashed before being stored in the database. It
 also must not be returned in the response. Returns `201 Created` on success,
 `400 Bad Request` if the request body doesn't match the schema above, and
-`409 Conflict` if a new user with the same username 
+`409 Conflict` if a new user with an existing username is created.
 
 Request:
 ```
 POST /api/v1/users
 {
-    "username": "jdoughnut25"
+    "username": "jdoughnut25",
     "email": "john.doe@example.com",
     "password": "notarealpassword",
     "preferences": {
@@ -867,6 +867,7 @@ Response:
 Status: 200 OK
 Set-Cookie: session_token=s3cr3t_s3ssi0n_str1ng_h3r3; Path=/; HttpOnly; Secure; SameSite=Lax; Expires=Tue, 27 Oct 2026 01:09:00 GMT
 Content-Type: application/json
+{}
 ```
 
 ### Ending a Session
