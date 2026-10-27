@@ -71,7 +71,7 @@ POST /api/v1/applications
 
 Response:
 ```
-201 Created
+Status: 201 Created
 {
   "data": {
     "id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
@@ -109,7 +109,7 @@ Response to a non-admin request that includes `user`:
 
 Response to an admin request:
 ```
-201 Created
+Status: 201 Created
 {
   "data": {
     "id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
@@ -155,7 +155,7 @@ GET /api/v1/applications
 
 Response:
 ```
-200 OK
+Status: 200 OK
 {
     "data": [
         {
@@ -200,7 +200,7 @@ GET /api/v1/applications?status=interviewing
 
 Response with filter:
 ```
-200 OK
+Status: 200 OK
 {
     "data": [
         {
@@ -232,7 +232,7 @@ GET /api/v1/applications/5213fcaf-15ea-4892-8419-d0d7077ebe16
 
 Response:
 ```
-200 OK
+Status: 200 OK
 {
   "data": {
     "id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
@@ -280,7 +280,7 @@ PATCH /api/v1/applications/8e34296b-ef82-4d6a-9b1f-30c49e3f0c11
 
 Response:
 ```
-200 OK
+Status: 200 OK
 {
   "data": {
     "id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
@@ -309,7 +309,7 @@ DELETE /api/v1/applications/8e34296b-ef82-4d6a-9b1f-30c49e3f0c11
 
 Response:
 ```
-204 No Content
+Status: 204 No Content
 ```
 
 Follow-up request:
@@ -384,7 +384,7 @@ POST /api/v1/applications/8e34296b-ef82-4d6a-9b1f-30c49e3f0c11/follow-ups
 
 Response:
 ```
-201 Created
+Status: 201 Created
 {
     "data": {
         "id": "c66a3e81-27c0-4b10-b47d-b1f3b2f20b31",
@@ -420,7 +420,7 @@ GET /api/v1/follow-ups
 
 Response:
 ```
-200 OK
+Status: 200 OK
 {
     "data": [
         {
@@ -468,7 +468,7 @@ GET /api/v1/follow-ups/3c12c4f2-e79e-4f16-bca9-a50273fc7e16
 
 Response:
 ```
-200 OK
+Status: 200 OK
 {
     "data": {
         "id": "3c12c4f2-e79e-4f16-bca9-a50273fc7e16",
@@ -507,7 +507,7 @@ PATCH /api/v1/follow-ups/e9e4c11e-16cf-49e8-96a6-d453d030c233
 
 Response:
 ```
-200 OK
+Status: 200 OK
 {
     "data": {
         "id": "e9e4c11e-16cf-49e8-96a6-d453d030c233",
@@ -531,7 +531,7 @@ PATCH /api/v1/follow-ups/e9e4c11e-16cf-49e8-96a6-d453d030c233
 
 Response:
 ```
-200 OK
+Status: 200 OK
 {
     "data": {
         "id": "e9e4c11e-16cf-49e8-96a6-d453d030c233",
@@ -559,7 +559,7 @@ POST /api/v1/follow-ups/e9e4c11e-16cf-49e8-96a6-d453d030c233/complete
 
 Response:
 ```
-200 OK
+Status: 200 OK
 {
     "data": {
         "id": "e9e4c11e-16cf-49e8-96a6-d453d030c233",
@@ -592,7 +592,7 @@ GET /api/v1/dashboard
 
 Response:
 ```
-200 OK
+Status: 200 OK
 {
     "data": {
         "applied": 24,
@@ -665,7 +665,7 @@ POST /api/v1/applications/8e34296b-ef82-4d6a-9b1f-30c49e3f0c11/generate-follow-u
 
 Response:
 ```
-200 OK
+Status: 200 OK
 {
   "data": {
     "application_id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
@@ -736,7 +736,7 @@ POST /api/v1/users
 
 Response:
 ```
-201 Created
+Status: 201 Created
 {
     "data": {
         "id": "723a5720-3bf4-4ecd-9b2e-a17eb509ebd8",
@@ -767,7 +767,7 @@ GET /api/v1/users/me
 
 Response:
 ```
-200 OK
+Status: 200 OK
 {
     "data": {
         "id": "723a5720-3bf4-4ecd-9b2e-a17eb509ebd8",
@@ -815,7 +815,7 @@ PATCH /api/v1/users/me
 
 Response:
 ```
-200 OK
+Status: 200 OK
 {
     "data": {
         "id": "723a5720-3bf4-4ecd-9b2e-a17eb509ebd8",
@@ -836,11 +836,51 @@ Response:
 ```
 
 ## Authentication & Session Management
+These endpoints facilitate authentication and session management for users.
 | Method | Endpoint | Purpose | Responses |
 | ------ | -------- | ------- | ------- |
-| `POST` | `/api/v1/auth/login` | Authenticate a user. | `200`, `401` |
-| `POST` | `/api/v1/auth/logout` | End session. | `200`, `404` |
+| `POST` | `/api/v1/auth/login` | Authenticate a user. | `200`, `400`, `401` |
+| `POST` | `/api/v1/auth/logout` | End session. | `204` |
 
+### Authenticating a User
+This endpoint authenticates a user into the application. Returns `200 OK` on
+success, `400 Bad Request` if either `login` or `password` are not provided, 
+and `401 Unauthorized` if invalid credentials are provided. 
+
+#### Field Specification
+| Field | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `login` | String | No | The user's email address or username. |
+| `password` | String | No | The user's password. |
+
+Request:
+```
+POST /api/v1/auth/login
+{
+    "login": "jdoughnut25",
+    "password": "notarealpassword"
+}
+```
+
+Response:
+```
+Status: 200 OK
+Set-Cookie: session_token=s3cr3t_s3ssi0n_str1ng_h3r3; Path=/; HttpOnly; Secure; SameSite=Lax; Expires=Tue, 27 Oct 2026 01:09:00 GMT
+Content-Type: application/json
+```
+
+### Ending a Session
+This endpoint ends a user session. Always returns `204 No Content`.
+
+Request:
+```
+POST /api/v1/auth/logout
+```
+
+Response:
+```
+Status: 204 No Content
+```
 
 ## Error Formats
 A consistent JSON error format should be used for every endpoint:
