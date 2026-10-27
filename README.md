@@ -578,8 +578,8 @@ These endpoints provide dashboard data and AI-assisted message generation.
 
 | Method | Endpoint | Purpose | Responses |
 | ------ | -------- | ------- | ------- |
-| `GET` | `/api/v1/dashboard` | Return application counts and application summaries | `200`, `401` |
-| `POST` | `/api/v1/applications/{id}/generate-follow-up` | Generate a message draft | `200`, `400`, `401`, `403`, `404` |
+| `GET` | `/api/v1/dashboard` | Return application counts and application summaries. | `200`, `401` |
+| `POST` | `/api/v1/applications/{id}/generate-follow-up` | Generate a message draft. | `200`, `400`, `401`, `403`, `404` |
 
 ### Return the dashboard summary
 Returns application counts and application summaries for the dashboard. Returns
@@ -674,6 +674,87 @@ Response:
   }
 }
 ```
+
+## User Account Management
+| Method | Endpoint | Purpose | Responses |
+| ------ | -------- | ------- | ------- |
+| `POST` | `/api/v1/users` | Register a new account. | `201`, `400`, `401`, `409` |
+| `GET` | `/api/v1/users/me` | Get current profile. | `200`, `401` |
+| `PATCH` | `/api/v1/users/me` | Update profile. | `200`, `400`, `401`|
+
+### Register a new account
+Registers a new user into the database based on the JSON response body. Accepts email,
+password, and profile details:
+
+```json
+{
+    "email": "john.doe@example.com",
+    "password": "notarealpassword",
+    "preferences": {
+        "follow_up_schedule": {
+            "follow_ups": [3, 7, 14], // days
+            "skip_weekends": true,
+            "skip_holidays": true,
+        },
+        "mode": "dark",
+    }
+}
+```
+
+#### Field specification
+| Field | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `email` | String | Yes | The user's email address. |
+| `password` | String | Yes | The user's password. |
+| `preferences` | Object | No | The user's preferences. |
+
+The password must be salted and hashed before being stored in the database.
+
+Request:
+```
+POST /api/v1/users
+{
+    "email": "john.doe@example.com",
+    "password": "notarealpassword",
+    "preferences": {
+        "follow_up_schedule": {
+            "follow_ups": [3, 7, 14], // days
+            "skip_weekends": true,
+            "skip_holidays": true,
+        },
+        "mode": "dark",
+    }
+}
+```
+
+Response:
+```
+201 Created
+{
+    "data": {
+        "id": "723a5720-3bf4-4ecd-9b2e-a17eb509ebd8"
+        "email": "john.doe@example.com",
+        "preferences": {
+            "follow_up_schedule": {
+                "follow_ups": [3, 7, 14], // days
+                "skip_weekends": true,
+                "skip_holidays": true,
+            },
+            "mode": "dark",
+        },
+        "created_at": "2026-10-26T23:48:00Z",
+        "updated_at": "2026-10-26T23:48:00Z"
+    }
+}
+```
+
+
+## Authentication & Session Management
+| Method | Endpoint | Purpose | Responses |
+| ------ | -------- | ------- | ------- |
+| `POST` | `/api/v1/auth/login` | Authenticate a user. | `200`, `401` |
+| `POST` | `/api/v1/auth/logout` | End session. | `200`, `404` |
+
 
 ## Error Formats
 A consistent JSON error format should be used for every endpoint:
