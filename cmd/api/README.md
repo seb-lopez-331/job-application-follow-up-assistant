@@ -1,11 +1,13 @@
 
 # API Contract
 
-
+All endpoints use the `/api/v1` prefix. Unless otherwise noted, request and
+response bodies use JSON. Protected endpoints require an authenticated client.
 
 ## Job Applications
-These define the API endpoints for registered job applications.
-| Method | Endpoint | Purpose | Returns |
+These endpoints manage registered job applications.
+
+| Method | Endpoint | Purpose | Responses |
 | -------| -------- | ------- | ------- |
 | `POST` | `/api/v1/applications` | Register a job application | `201`, `400`, `401`, `403`, `409` |
 | `GET` | `/api/v1/applications` | List job applications with filters | `200`, `401`, `403` |
@@ -14,7 +16,12 @@ These define the API endpoints for registered job applications.
 | `DELETE` | `/api/v1/applications/{id}` | Unregister a job application | `204`, `401`, `403`, `404` |
 
 ### Register a job application
-Registers a job application into the database. Returns `201 Created` or `400 Bad Request` if the client is authenticated and the database has no such job, depending on whether the JSON is passed in with the following structure:
+Registers a job application. The request body must be valid JSON and include
+all required fields listed below. Returns `201 Created` on success,
+`400 Bad Request` if the body is invalid, `401 Unauthorized` if the client is
+unauthenticated, `403 Forbidden` if a non-admin client attempts to create an
+application for another user, or `409 Conflict` if an application already
+exists for the same user, company, and role.
 
 ```json
 {
@@ -29,24 +36,23 @@ Registers a job application into the database. Returns `201 Created` or `400 Bad
 }
 ```
 
-#### Fields Specification
+#### Field specification
 | Field | Type | Required | Description |
 | :--- | :--- | :---: | :--- |
-| `applied_on` | String | Yes | The day when the user applied to the job. |
-| `company_name` | String | Yes | The name of the company the user is applying to. |
-| `location` | String | Yes | Where the job will be performed. |
-| `role_title` | String | Yes | The name of the role the user is applying to. |
-| `work_arrangement` | String | Yes | Accepts the values of `remote`, `hybrid`, or `on-site`. |
-| `description` | String | No | The description of the job the user is applying to. |
-| `notes` | String | No | Any notes the user may record about the job. |
-| `job_url` | String | No | The URL of the job posting. |
-| `posted_at` | String | No | The date when the job was posted. |
-| `status` | String | No | The status of the job application. Defaults to `applied`. |
-| `user` | String | Admin-only | The user's username. |
+| `company_name` | String | Yes | Company name. |
+| `role_title` | String | Yes | Job title. |
+| `location` | String | Yes | Job location. |
+| `work_arrangement` | String | Yes | One of `remote`, `hybrid`, or `on-site`. |
+| `applied_on` | String (date) | Yes | Date the user applied, in `YYYY-MM-DD` format. |
+| `description` | String | No | Job description. |
+| `notes` | String | No | Notes about the application. |
+| `job_url` | String (URI) | No | URL of the job posting. |
+| `posted_at` | String (date) | No | Date the job was posted, in `YYYY-MM-DD` format. |
+| `status` | String | No | Application status; defaults to `applied`. |
+| `user` | String | Admin-only | Username of the user the application belongs to. |
 
-Returns `401 Unauthorized` if the client is unauthenticated. Returns `403 Forbidden` if the client makes a request for a different user, unless the client is an admin. Returns `409 Conflict` if a job application with a matching user, company name, and role title are already in the database.
-
-Note that the user field shoud only be visible in the response when an admin is making a request.
+The `user` field may be supplied only by an admin. It is included in the
+response only when the requester is an admin.
 
 Request:
 ```
@@ -80,11 +86,11 @@ Response:
 }
 ```
 
-Admin Request:
+Admin request:
 ```
 POST /api/v1/applications
 {
-    "user": "johndoe"
+    "user": "johndoe",
     "company_name": "Acme",
     "role_title": "Platform Engineer",
     "job_url": "https://example.com/jobs/123",
@@ -96,13 +102,14 @@ POST /api/v1/applications
 }
 ```
 
-Non-Admin Response:
+Response to a non-admin request that includes `user`:
 ```
 403 Forbidden
 ```
 
-Admin Response:
+Response to an admin request:
 ```
+201 Created
 {
   "data": {
     "id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
@@ -119,13 +126,27 @@ Admin Response:
 ```
 
 ### List job applications with filters
-Lists all job applications registered with the user, or all users if the user is an admin. If query parameters are specified, the list can be filtered by job application stage, job role title, number of entries, and so forth:
+Lists the authenticated user's applications. Admins may list applications
+across users. Supported query parameters are:
 
 ```
-/api/v1/applications?stage=applied&search=platform&limit=20&cursor=...
+GET /api/v1/applications?status=applied&search=platform&limit=20&cursor=eyJvZmZzZXQiOjIwfQ
 ```
 
-Additionally, users can filter the list by user. Returns `200 OK` if client is authenticated, `401 Unauthorized` otherwise, and `403 Forbidden` if the client tries to filter by a different username.
+| Parameter | Description |
+| :--- | :--- |
+| `status` | Filter by application status. |
+| `search` | Search application company names and role titles. |
+| `limit` | Maximum number of results to return. |
+| `cursor` | Continue listing from a cursor returned by the API. |
+| `user` | Admin-only username to filter by. |
+
+List responses include a top-level `next_cursor` field. It is `null` when there
+are no more results; otherwise, pass its value as the `cursor` query parameter
+to retrieve the next page.
+
+Returns `200 OK` if the client is authenticated, `401 Unauthorized` otherwise,
+or `403 Forbidden` if a non-admin client tries to filter by another username.
 
 Request:
 ```
@@ -167,7 +188,8 @@ Response:
             "created_at": "2026-10-24T13:23:00Z",
             "updated_at": "2026-10-24T13:23:00Z"
         }
-    ]
+    ],
+    "next_cursor": null
 }
 ```
 
@@ -191,12 +213,17 @@ Response with filter:
             "created_at": "2026-10-24T13:23:00Z",
             "updated_at": "2026-10-24T13:23:00Z"
         }
-    ]
+    ],
+    "next_cursor": null
 }
 ```
 
-### Get job application by ID
-Looks up a registered application by its UUID. Returns `200 OK` if an application with the specified UUID is found for the user, `403 Forbidden` if a non-admin user attempts to lookup an application that doesn't belong to them, and a `404 Not Found` otherwise.
+### Get a job application by ID
+Looks up an application by its UUID. Returns `200 OK` if the application is
+found and belongs to the user (or the requester is an admin), `401 Unauthorized`
+if the client is unauthenticated, `403 Forbidden` if a non-admin user attempts
+to access another user's application, or `404 Not Found` if no such application
+exists.
 
 Request:
 ```
@@ -216,29 +243,32 @@ Response:
     "next_follow_up_on": "2026-10-29",
     "created_at": "2026-10-22T12:59:00Z",
     "updated_at": "2026-10-22T12:59:00Z"
-    }
+  }
 }
-
 ```
 
 ### Update selected fields
-Updates the job application's fields to what's specified in the input JSON. Returns `200 OK` only if there is at least one valid field in the JSON and no invalid fields, and a `400 Bad Request` otherwise. Here's a reference for the valid fields:
+Updates the job application's fields using the supplied JSON object. Include
+at least one supported field; unknown fields or an invalid body result in
+`400 Bad Request`. A successful update returns `200 OK`.
 
-#### Fields Specification
+#### Field specification
 | Field | Type  | Description |
 | :--- | :--- | :--- |
-| `applied_on` | String | The day when the user applied to the job. |
-| `company_name` | String | The name of the company the user is applying to. |
-| `location` | String |  Where the job will be performed. |
-| `role_title` | String |  The name of the role the user is applying to. |
-| `work_arrangement` | String | Accepts the values of `remote`, `hybrid`, or `on-site`. |
-| `description` | String | The description of the job the user is applying to. |
-| `notes` | String | Any notes the user may record about the job. |
-| `job_url` | String | The URL of the job posting. |
-| `posted_at` | String | The date when the job was posted. |
-| `status` | String | The status of the job application. Defaults to `applied`. |
+| `applied_on` | String (date) | Date the user applied, in `YYYY-MM-DD` format. |
+| `company_name` | String | Company name. |
+| `location` | String | Job location. |
+| `role_title` | String | Job title. |
+| `work_arrangement` | String | One of `remote`, `hybrid`, or `on-site`. |
+| `description` | String | Job description. |
+| `notes` | String | Notes about the application. |
+| `job_url` | String (URI) | URL of the job posting. |
+| `posted_at` | String (date) | Date the job was posted, in `YYYY-MM-DD` format. |
+| `status` | String | Application status. |
 
-Returns `401 Unauthorized` if the client isn't authenticated, `403 Forbidden` if a non-admin user requests this for another user's job application, or `404 Not Found` if the job application ID cannot be found.
+Returns `401 Unauthorized` if the client is unauthenticated, `403 Forbidden`
+if a non-admin user requests another user's application, or `404 Not Found` if
+the application ID does not exist.
 
 Request:
 ```
@@ -265,10 +295,13 @@ Response:
 }
 ```
 
-### Unregister a job application
-Deletes a job application associated with the ID passed in the URL. Returns `204 No Content` only if an entry associated with that ID is found. Returns `401 Unauthorized` if the client isn't authenticated, `403 Forbidden` if a non-admin user requests to delete a job application associated with another user, and `404 Not Found` if no such job application matches the ID.
+### Delete a job application
+Deletes the job application identified by the UUID in the URL. Returns
+`204 No Content` on success, `401 Unauthorized` if the client is
+unauthenticated, `403 Forbidden` if a non-admin user attempts to delete another
+user's application, or `404 Not Found` if the application does not exist.
 
-Request (Delete Acme):
+Request:
 ```
 DELETE /api/v1/applications/8e34296b-ef82-4d6a-9b1f-30c49e3f0c11
 ```
@@ -278,12 +311,12 @@ Response:
 204 No Content
 ```
 
-Request After:
+Follow-up request:
 ```
 GET /api/v1/applications
 ```
 
-Response After (Acme gone):
+Follow-up response:
 ```
 {
     "data": [
@@ -312,39 +345,38 @@ Response After (Acme gone):
 ```
 
 ## Job Application Follow-Ups
-These define the API endpoints for job application follow-ups.
-| Method | Endpoint | Purpose | Returns |
+These endpoints manage job application follow-ups.
+
+| Method | Endpoint | Purpose | Responses |
 | -------| -------- | ------- | ------- |
-| `POST` | `/api/v1/applications/{id}/follow-ups` | Schedule a follow-up | `201`, `400`, `401`, `403`, `409` |
+| `POST` | `/api/v1/applications/{id}/follow-ups` | Schedule a follow-up | `201`, `400`, `401`, `403` |
 | `GET` | `/api/v1/follow-ups` | List pending or due follow-ups | `200`, `401`, `403` |
-| `GET` | `/api/v1/follow-ups/{id}` | Get a specific follow-up | `200`, `401`, `403` |
-| `PATCH` | `/api/v1/follow-ups/{id}` | Reschedule or update a follow-up | `200`, `400`, `401`, `403` |
-| `POST` | `/api/v1/follow-ups/{id}/complete` | Mark it completed | `201`, `400`, `401`, `403`, `409` |
+| `GET` | `/api/v1/follow-ups/{id}` | Get a specific follow-up | `200`, `401`, `403`, `404` |
+| `PATCH` | `/api/v1/follow-ups/{id}` | Reschedule or update a follow-up | `200`, `400`, `401`, `403`, `404` |
+| `POST` | `/api/v1/follow-ups/{id}/complete` | Mark it complete | `200`, `401`, `403`, `404`, `409` |
 
 ### Schedule a follow-up
-Creates a follow up instance for a user's job application. Returns `201 Created` only if the the request body is a JSON passed in with the following structure:
+Creates a follow-up for the application identified by `{id}`. Returns
+`201 Created` on success, `400 Bad Request` if the request body is invalid,
+`401 Unauthorized` if the client is unauthenticated, or `403 Forbidden` if the
+application belongs to another user and the requester is not an admin.
 
 ```json
 {
-    "application_id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
     "due_on": "2026-11-04"
 }
 ```
 
-#### Fields Specification
+#### Field specification
 | Field | Type | Required | Description |
 | :--- | :--- | :---: | :--- |
-| `application_id` | String | Yes | The job application's ID |
-| `due_on` | String | Yes | The day when the user is due to follow up. |
-| `message_draft` | String | No | A follow-up message for the user to draft. |
-
-Returns `400 Bad Request` if the input doesn't comply with the above structure; `401 Unauthorized` if the client is unauthenticated; `403 Forbidden` if the client makes a request for a different user, unless the client is an admin; and `409 Conflict` if a job application with a matching user, company name, and role title are already in the database.
+| `due_on` | String (date) | Yes | Date the follow-up is due, in `YYYY-MM-DD` format. |
+| `message_draft` | String or `null` | No | Draft follow-up message. |
 
 Request:
 ```
 POST /api/v1/applications/8e34296b-ef82-4d6a-9b1f-30c49e3f0c11/follow-ups
 {
-    "application_id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
     "due_on": "2026-11-04"
 }
 ```
@@ -366,13 +398,19 @@ Response:
 ```
 
 ### List pending or due follow-ups
-Lists pending or due follow-ups associated with a user, or all users if the client is an admin. If query parameters are specified, the list can be filtered by when the follow-up is due, the follow-up status, user (admin-only) and so forth:
+Lists follow-ups associated with the authenticated user. Admins may list
+follow-ups across users. The list can be filtered by due date, status, or (for
+admins only) username:
 
 ```
-support ?due=overdue, ?due=today, and ?status=pending.
+GET /api/v1/follow-ups?due=overdue
+GET /api/v1/follow-ups?due=today&status=pending
+GET /api/v1/follow-ups?user=johndoe
 ```
 
-Returns `200 OK` only if a client is authenticated, `401 Unauthorized` if unauthenticated, or `403 Forbidden` if a non-admin user requests to query follow-ups for another user.
+`due` accepts `overdue` or `today`. Returns `200 OK` if the client is
+authenticated, `401 Unauthorized` if unauthenticated, or `403 Forbidden` if a
+non-admin client filters by another user.
 
 Request:
 ```
@@ -401,7 +439,7 @@ Response:
             "message_draft": null,
             "sent_at": null,
             "completed_at": null
-        },        
+        },
         {
             "id": "e9e4c11e-16cf-49e8-96a6-d453d030c233",
             "application_id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
@@ -410,13 +448,16 @@ Response:
             "message_draft": null,
             "sent_at": null,
             "completed_at": null
-        },
+        }
     ]
 }
 ```
 
-### Get a specific follow up by ID
-Retrieves a specific follow-up instance by ID. Returns `200 OK` only if a client is authenticated. Returns `401 Unauthorized` otherwise, `403 Forbidden` if a non-admin user tries to look up by another user's follow up ID, and `404 Not Found` if the follow-up ID cannot be found.
+### Get a specific follow-up by ID
+Retrieves a follow-up by its UUID. Returns `200 OK` if it is found and belongs
+to the user (or the requester is an admin), `401 Unauthorized` if the client is
+unauthenticated, `403 Forbidden` if a non-admin user tries to access another
+user's follow-up, or `404 Not Found` if the follow-up does not exist.
 
 Request:
 ```
@@ -427,7 +468,7 @@ Response:
 ```
 200 OK
 {
-    "data":  {
+    "data": {
         "id": "3c12c4f2-e79e-4f16-bca9-a50273fc7e16",
         "application_id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
         "due_on": "2026-11-10",
@@ -440,15 +481,19 @@ Response:
 ```
 
 ### Reschedule or update a follow-up
-Updates a follow-up item's data based on the item's ID passed into the URL. Returns `200 OK` only if the the request body is a JSON passed in with at least one of the following fields:
+Updates the follow-up identified by the UUID in the URL. Include at least one
+supported field; an empty or invalid body returns `400 Bad Request`. A
+successful update returns `200 OK`.
 
-#### Fields Specification
+#### Field specification
 | Field | Type | Required | Description |
 | :--- | :--- | :---: | :--- |
-| `due_on` | String | No | The job application's ID |
-| `message_draft` | String | No | A follow-up message for the user to draft. |
+| `due_on` | String (date) | No | New due date, in `YYYY-MM-DD` format. |
+| `message_draft` | String or `null` | No | Follow-up message draft. |
 
-Returns `400 Bad Request` if the input doesn't comply with the above structure; `401 Unauthorized` if the client is unauthenticated; `403 Forbidden` if the client makes a request for a different user unless the client is an admin; `404 Not Found` if no follow-up item is found for the associated ID; and `409 Conflict` if a job application with a matching user, company name, and role title are already in the database.
+Returns `401 Unauthorized` if the client is unauthenticated, `403 Forbidden`
+if a non-admin user requests another user's follow-up, or `404 Not Found` if
+the follow-up ID does not exist.
 
 Request:
 ```
@@ -478,7 +523,7 @@ Request:
 ```
 PATCH /api/v1/follow-ups/e9e4c11e-16cf-49e8-96a6-d453d030c233
 {
-    "message_draft": "Hi Recruiter, Hope this week has been treating you well. Please hire me, I desperately need the money and my girlfriend that I worked so hard to impress will leave me if I don't buy her a Louis Vuitton purse."
+    "message_draft": "Hello [Recruiter Name], I hope you are doing well. I wanted to follow up on my application and ask whether there are any updates. Thank you for your time."
 }
 ```
 
@@ -490,8 +535,8 @@ Response:
         "id": "e9e4c11e-16cf-49e8-96a6-d453d030c233",
         "application_id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
         "due_on": "2026-12-01",
-        "status": "cancelled",
-        "message_draft": "Hi Recruiter, Hope this week has been treating you well. Please hire me, I desperately need the money and my girlfriend that I worked so hard to impress will leave me if I don't buy her a Louis Vuitton purse.",
+        "status": "pending",
+        "message_draft": "Hello [Recruiter Name], I hope you are doing well. I wanted to follow up on my application and ask whether there are any updates. Thank you for your time.",
         "sent_at": null,
         "completed_at": null
     }
@@ -499,7 +544,11 @@ Response:
 ```
 
 ### Mark follow-up as complete
-Registers a follow-up item as complete based on the item's ID passed into the URL. Returns `200 OK` only if request is authenticated, `401 Unauthorized` if unauthenticated, `403 Forbidden` if a non-admin client requests to mark another user's follow-up item as complete, `404 Not Found` if no such follow-up item with an ID is found, and `409 Conflict` if a follow-up item is already marked as complete.
+Marks the follow-up identified by the UUID in the URL as complete. Returns
+`200 OK` on success, `401 Unauthorized` if the client is unauthenticated,
+`403 Forbidden` if a non-admin user attempts to complete another user's
+follow-up, `404 Not Found` if the follow-up does not exist, or `409 Conflict`
+if it is already complete.
 
 Request:
 ```
@@ -514,8 +563,8 @@ Response:
         "id": "e9e4c11e-16cf-49e8-96a6-d453d030c233",
         "application_id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
         "due_on": "2026-12-01",
-        "status": "cancelled",
-        "message_draft": "Hi Recruiter, Hope this week has been treating you well. Please hire me, I desperately need the money and my girlfriend that I worked so hard to impress will leave me if I don't buy her a Louis Vuitton purse.",
+        "status": "completed",
+        "message_draft": "Hello [Recruiter Name], I hope you are doing well. I wanted to follow up on my application and ask whether there are any updates. Thank you for your time.",
         "sent_at": null,
         "completed_at": "2026-12-01T13:23:00Z"
     }
@@ -523,16 +572,16 @@ Response:
 ```
 
 ## Dashboard and AI
-These define the API endpoints for the dashboard and AI-integrated message generation.
-| Method | Endpoint | Purpose | Returns |
+These endpoints provide dashboard data and AI-assisted message generation.
+
+| Method | Endpoint | Purpose | Responses |
 | ------ | -------- | ------- | ------- |
-| `GET` | `/api/v1/dashboard` | Return application counts and today's tasks | `200`, `401` |
-| `POST` | `/api/v1/applications/{id}/generate-follow-up` | Generate a message draft | `200`, `400`, `401`, `403` |
+| `GET` | `/api/v1/dashboard` | Return application counts and application summaries | `200`, `401` |
+| `POST` | `/api/v1/applications/{id}/generate-follow-up` | Generate a message draft | `200`, `400`, `401`, `403`, `404` |
 
-Note: Implement the dashboard and message-generation endpoints after the basic CRUD and scheduling flows work. They depend on those underlying capabilities.
-
-### Return application counts and today's tasks
-Returns dashboard related data for the Job Application Follow Up Assistant application. Returns `200` if the client is authenticated and `401` otherwise.
+### Return the dashboard summary
+Returns application counts and application summaries for the dashboard. Returns
+`200 OK` if the client is authenticated or `401 Unauthorized` otherwise.
 
 Request:
 ```
@@ -541,6 +590,7 @@ GET /api/v1/dashboard
 
 Response:
 ```
+200 OK
 {
     "data": {
         "applied": 24,
@@ -577,14 +627,17 @@ Response:
                 "created_at": "2026-10-24T13:23:00Z",
                 "updated_at": "2026-10-24T13:23:00Z"
             }
-        ], ...
+        ]
     }
 }
-
 ```
 
-### Generates a message draft
-Generates a message draft by communicating with an LLM in the backend. Returns `200 OK` only if the JSON follows this format:
+### Generate a message draft
+Generates a message draft using an LLM. The request body must be valid JSON and
+include both required fields. Returns `200 OK` on success, `400 Bad Request`
+if the body is invalid, `401 Unauthorized` if the client is unauthenticated,
+`403 Forbidden` if a non-admin user attempts to generate a draft for another
+user's application, or `404 Not Found` if the application does not exist.
 
 ```json
 {
@@ -593,13 +646,11 @@ Generates a message draft by communicating with an LLM in the backend. Returns `
 }
 ```
 
-#### Fields Specification
+#### Field specification
 | Field | Type | Required | Description |
 | :--- | :--- | :---: | :--- |
-| `tone` | String | Yes | The tone in which the LLM will generate the message in. |
-| `context` | String | Yes | The context behind the message that will be generated. |
-
-Returns `400 Bad Request` if the JSON does not follow the above format, `401 Unauthorized` if the client isn't authenticated, or `403 Forbidden` if a non-admin user attempts to generate a message draft for another user.
+| `tone` | String | Yes | Tone to use for the generated message. |
+| `context` | String | Yes | Context for the generated message. |
 
 Request:
 ```
@@ -616,7 +667,7 @@ Response:
 {
   "data": {
     "application_id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
-    "message_draft": "Hi [Recruiter Name], ...",
+    "message_draft": "Hello [Recruiter Name], I hope you are doing well. I wanted to follow up on my application.",
     "generated_at": "2026-10-26T16:00:00Z"
   }
 }
