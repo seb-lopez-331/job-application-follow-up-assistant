@@ -321,48 +321,31 @@ These define the API endpoints for job application follow-ups.
 | `PATCH` | `/api/v1/follow-ups/{id}` | Reschedule or update a follow-up | `200`, `400`, `401`, `403` |
 | `POST` | `/api/v1/follow-ups/{id}/complete` | Mark it completed | `201`, `400`, `401`, `403`, `409` |
 
-Supports the following list filters
-```
-support ?due=overdue, ?due=today, and ?status=pending.
-```
-
 ### Schedule a follow-up
 Creates a follow up instance for a user's job application. Returns `201 Created` only if the the request body is a JSON passed in with the following structure:
 
 ```json
 {
-    "id": "c66a3e81-27c0-4b10-b47d-b1f3b2f20b31",
     "application_id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
-    "due_on": "2026-11-04",
-    "status": "pending",
-    "message_draft": null,
-    "sent_at": null,
-    "completed_at": null
-  }
+    "due_on": "2026-11-04"
+}
 ```
 
 #### Fields Specification
 | Field | Type | Required | Description |
 | :--- | :--- | :---: | :--- |
-| `applied_on` | String | Yes | The day when the user applied to the job. |
-| `company_name` | String | Yes | The name of the company the user is applying to. |
-| `location` | String | Yes | Where the job will be performed. |
-| `role_title` | String | Yes | The name of the role the user is applying to. |
-| `user` | String | Yes | The user's username. |
-| `work_arrangement` | String | Yes | Accepts the values of `remote`, `hybrid`, or `on-site`. |
-| `description` | String | No | The description of the job the user is applying to. |
-| `notes` | String | No | Any notes the user may record about the job. |
-| `job_url` | String | No | The URL of the job posting. |
-| `posted_at` | String | No | The date when the job was posted. |
-| `status` | String | No | The status of the job application. Defaults to `applied`. |
+| `application_id` | String | Yes | The job application's ID |
+| `due_on` | String | Yes | The day when the user is due to follow up. |
+| `message_draft` | String | No | A follow-up message for the user to draft. |
 
-Returns `401 Unauthorized` if the client is unauthenticated. Returns `403 Forbidden` if the client makes a request for a different user, unless the client is an admin. Returns `409 Conflict` if a job application with a matching user, company name, and role title are already in the database.
+Returns `400 Bad Request` if the input doesn't comply with the above structure; `401 Unauthorized` if the client is unauthenticated; `403 Forbidden` if the client makes a request for a different user, unless the client is an admin; and `409 Conflict` if a job application with a matching user, company name, and role title are already in the database.
 
 Request:
 ```
 POST /api/v1/applications/8e34296b-ef82-4d6a-9b1f-30c49e3f0c11/follow-ups
 {
-  "due_on": "2026-11-04"
+    "application_id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
+    "due_on": "2026-11-04"
 }
 ```
 
@@ -370,19 +353,27 @@ Response:
 ```
 201 Created
 {
-  "data": {
-    "id": "c66a3e81-27c0-4b10-b47d-b1f3b2f20b31",
-    "application_id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
-    "due_on": "2026-11-04",
-    "status": "pending",
-    "message_draft": null,
-    "sent_at": null,
-    "completed_at": null
-  }
+    "data": {
+        "id": "c66a3e81-27c0-4b10-b47d-b1f3b2f20b31",
+        "application_id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
+        "due_on": "2026-11-04",
+        "status": "pending",
+        "message_draft": null,
+        "sent_at": null,
+        "completed_at": null
+    }
 }
 ```
 
 ### List pending or due follow-ups
+Lists pending or due follow-ups associated with a user, or all users if the client is an admin. If query parameters are specified, the list can be filtered by when the follow-up is due, the follow-up status, user (admin-only) and so forth:
+
+```
+support ?due=overdue, ?due=today, and ?status=pending.
+```
+
+Returns `200 OK` only if a client is authenticated, `401 Unauthorized` if unauthenticated, or `403 Forbidden` if a non-admin user requests to query follow-ups for another user.
+
 Request:
 ```
 GET /api/v1/follow-ups
@@ -425,6 +416,8 @@ Response:
 ```
 
 ### Get a specific follow up by ID
+Retrieves a specific follow-up instance by ID. Returns `200 OK` only if a client is authenticated. Returns `401 Unauthorized` otherwise, `403 Forbidden` if a non-admin user tries to look up by another user's follow up ID, and `404 Not Found` if the follow-up ID cannot be found.
+
 Request:
 ```
 GET /api/v1/follow-ups/3c12c4f2-e79e-4f16-bca9-a50273fc7e16
@@ -447,6 +440,16 @@ Response:
 ```
 
 ### Reschedule or update a follow-up
+Updates a follow-up item's data based on the item's ID passed into the URL. Returns `200 OK` only if the the request body is a JSON passed in with at least one of the following fields:
+
+#### Fields Specification
+| Field | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `due_on` | String | No | The job application's ID |
+| `message_draft` | String | No | A follow-up message for the user to draft. |
+
+Returns `400 Bad Request` if the input doesn't comply with the above structure; `401 Unauthorized` if the client is unauthenticated; `403 Forbidden` if the client makes a request for a different user unless the client is an admin; `404 Not Found` if no follow-up item is found for the associated ID; and `409 Conflict` if a job application with a matching user, company name, and role title are already in the database.
+
 Request:
 ```
 PATCH /api/v1/follow-ups/e9e4c11e-16cf-49e8-96a6-d453d030c233
@@ -496,6 +499,8 @@ Response:
 ```
 
 ### Mark follow-up as complete
+Registers a follow-up item as complete based on the item's ID passed into the URL. Returns `200 OK` only if request is authenticated, `401 Unauthorized` if unauthenticated, `403 Forbidden` if a non-admin client requests to mark another user's follow-up item as complete, `404 Not Found` if no such follow-up item with an ID is found, and `409 Conflict` if a follow-up item is already marked as complete.
+
 Request:
 ```
 POST /api/v1/follow-ups/e9e4c11e-16cf-49e8-96a6-d453d030c233/complete
@@ -519,14 +524,16 @@ Response:
 
 ## Dashboard and AI
 These define the API endpoints for the dashboard and AI-integrated message generation.
-| Method | Endpoint | Purpose |
-| ------ | -------- | ------- |
-| `GET` | `/api/v1/dashboard` | Return application counts and today's tasks |
-| `POST` | `/api/v1/applications/{id}/generate-follow-up` | Generate a message draft |
+| Method | Endpoint | Purpose | Returns |
+| ------ | -------- | ------- | ------- |
+| `GET` | `/api/v1/dashboard` | Return application counts and today's tasks | `200`, `401` |
+| `POST` | `/api/v1/applications/{id}/generate-follow-up` | Generate a message draft | `200`, `400`, `401`, `403` |
 
 Note: Implement the dashboard and message-generation endpoints after the basic CRUD and scheduling flows work. They depend on those underlying capabilities.
 
 ### Return application counts and today's tasks
+Returns dashboard related data for the Job Application Follow Up Assistant application. Returns `200` if the client is authenticated and `401` otherwise.
+
 Request:
 ```
 GET /api/v1/dashboard
@@ -577,6 +584,23 @@ Response:
 ```
 
 ### Generates a message draft
+Generates a message draft by communicating with an LLM in the backend. Returns `200 OK` only if the JSON follows this format:
+
+```json
+{
+    "tone": "professional",
+    "context": "I spoke with the recruiter last week."
+}
+```
+
+#### Fields Specification
+| Field | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `tone` | String | Yes | The tone in which the LLM will generate the message in. |
+| `context` | String | Yes | The context behind the message that will be generated. |
+
+Returns `400 Bad Request` if the JSON does not follow the above format, `401 Unauthorized` if the client isn't authenticated, or `403 Forbidden` if a non-admin user attempts to generate a message draft for another user.
+
 Request:
 ```
 POST /api/v1/applications/8e34296b-ef82-4d6a-9b1f-30c49e3f0c11/generate-follow-up
