@@ -6,11 +6,12 @@ CREATE TABLE users (
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT preferences_follow_up_schedule_check CHECK (
         preferences @> '{"follow_up_schedule": {}}'::jsonb AND
         jsonb_typeof(preferences->'follow_up_schedule') = 'object'
-    );
+    )
 );
 
 CREATE TABLE sessions (
@@ -26,15 +27,15 @@ CREATE TABLE jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     role_title TEXT NOT NULL,
     company_name TEXT NOT NULL,
-    date_posted TIMESTAMPZ NOT NULL,
+    date_posted TIMESTAMPTZ NOT NULL,
     loc TEXT,
     descr TEXT NOT NULL,
     job_url TEXT,
     work_arrangement TEXT CHECK (
         work_arrangement IN ('remote', 'hybrid', 'on-site')
     ),
-    created_at TIMESTAMPZ NOT NULL DEFAULT now()
-    updated_at TIMESTAMPZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE activities (
@@ -62,24 +63,7 @@ CREATE TABLE contacts (
     phone TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-)
-
-CREATE TABLE follow_ups (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    job_application_id UUID NOT NULL
-        REFERENCES job_applications(id) ON DELETE CASCADE,
-    due_on TIMESTAMPTZ NOT NULL,
-    message_draft TEXT,
-    follow_up_status TEXT NOT NULL DEFAULT 'pending'
-        CHECK (status IN (
-            'pending', 'completed', 'cancelled'
-        )),
-    sent_at TIMESTAMPTZ,
-    completed_at TIMESTAMPTZ,
-
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-)
+);
 
 CREATE TABLE job_applications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -90,7 +74,7 @@ CREATE TABLE job_applications (
     contact_id UUID REFERENCES contacts(id)
         ON DELETE SET NULL,
     stage TEXT NOT NULL DEFAULT 'applied'
-        CHECK(status IN (
+        CHECK(stage IN (
             'saved',
             'applied',
             'recruiter_screen',
@@ -106,7 +90,23 @@ CREATE TABLE job_applications (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-create TABLE inteviews (
+CREATE TABLE follow_ups (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    job_application_id UUID NOT NULL
+        REFERENCES job_applications(id) ON DELETE CASCADE,
+    due_on TIMESTAMPTZ NOT NULL,
+    message_draft TEXT,
+    follow_up_status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (follow_up_status IN (
+            'pending', 'completed', 'cancelled'
+        )),
+    sent_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE interviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_application_id UUID NOT NULL REFERENCES job_applications(id)
         ON DELETE CASCADE,
@@ -119,7 +119,7 @@ create TABLE inteviews (
     notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-)
+);
 
 CREATE TABLE job_application_activities (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -139,15 +139,15 @@ CREATE TABLE job_application_follow_ups (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_applications_user_status
-    ON applications (user_id, status);
+CREATE INDEX idx_applications_user_stage
+    ON job_applications (user_id, stage);
 
 CREATE INDEX idx_applications_user_follow_up
-    ON applications (user_id, next_follow_up_on);
+    ON job_applications (user_id, next_follow_up_on);
 
 CREATE INDEX idx_follow_ups_due
     ON follow_ups (due_on)
-    WHERE status = 'pending';
+    WHERE follow_up_status = 'pending';
 
-CREATE INDEX idx_activities_application_time
-    ON activities (application_id, occurred_at DESC);
+CREATE INDEX idx_job_application_activities_time
+    ON job_application_activities (job_application_id, created_at DESC);

@@ -676,18 +676,20 @@ Response:
 ```
 
 ## User Account Management
+These API methods provide means to create new, and access and update existing users.
 | Method | Endpoint | Purpose | Responses |
 | ------ | -------- | ------- | ------- |
-| `POST` | `/api/v1/users` | Register a new account. | `201`, `400`, `401`, `409` |
+| `POST` | `/api/v1/users` | Register a new account. | `201`, `400`, `409` |
 | `GET` | `/api/v1/users/me` | Get current profile. | `200`, `401` |
 | `PATCH` | `/api/v1/users/me` | Update profile. | `200`, `400`, `401`|
 
-### Register a new account
+### Register a New Account
 Registers a new user into the database based on the JSON response body. Accepts email,
 password, and profile details:
 
 ```json
 {
+    "username": "jdoughnut25",
     "email": "john.doe@example.com",
     "password": "notarealpassword",
     "preferences": {
@@ -701,19 +703,24 @@ password, and profile details:
 }
 ```
 
-#### Field specification
+#### Field Specification
 | Field | Type | Required | Description |
 | :--- | :--- | :---: | :--- |
+| `username` | String | Yes | The user's username. |
 | `email` | String | Yes | The user's email address. |
 | `password` | String | Yes | The user's password. |
 | `preferences` | Object | No | The user's preferences. |
 
-The password must be salted and hashed before being stored in the database.
+The password must be salted and hashed before being stored in the database. It
+also must not be returned in the response. Returns `201 Created` on success,
+`400 Bad Request` if the request body doesn't match the schema above, and
+`409 Conflict` if a new user with the same username 
 
 Request:
 ```
 POST /api/v1/users
 {
+    "username": "jdoughnut25"
     "email": "john.doe@example.com",
     "password": "notarealpassword",
     "preferences": {
@@ -732,7 +739,8 @@ Response:
 201 Created
 {
     "data": {
-        "id": "723a5720-3bf4-4ecd-9b2e-a17eb509ebd8"
+        "id": "723a5720-3bf4-4ecd-9b2e-a17eb509ebd8",
+        "username": "jdoughnut25",
         "email": "john.doe@example.com",
         "preferences": {
             "follow_up_schedule": {
@@ -748,6 +756,84 @@ Response:
 }
 ```
 
+### Get Current Profile
+Allows the logged-in user to see their own account details. Returns `200 OK` if
+authenticated and `401 Unauthorized` otherwise.
+
+Request:
+```
+GET /api/v1/users/me
+```
+
+Response:
+```
+200 OK
+{
+    "data": {
+        "id": "723a5720-3bf4-4ecd-9b2e-a17eb509ebd8",
+        "username": "jdoughnut25",
+        "email": "john.doe@example.com",
+        "preferences": {
+            "follow_up_schedule": {
+                "follow_ups": [3, 7, 14], // days
+                "skip_weekends": true,
+                "skip_holidays": true,
+            },
+            "mode": "dark",
+        },
+        "created_at": "2026-10-26T23:48:00Z",
+        "updated_at": "2026-10-26T23:48:00Z"
+    }
+}
+```
+
+### Update Profile
+Allows user to update email, change password, or edit preferences.
+Here are the following fields that can be updated:
+
+#### Field Specification
+| Field | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `email` | String | No | The user's email address. |
+| `password` | String | No | The user's password. |
+| `preferences` | Object | No | The user's preferences. |
+
+At least one of these fields is required. Returns `200 OK` on success, 
+`400 Bad Request` if no fields are present or if an invalid field is
+present in the JSON, or `401 Unauthorized` if the client is not
+authenticated.
+
+Request:
+```
+PATCH /api/v1/users/me
+{
+    "preferences": {
+        "mode": "light"
+    }
+}
+```
+
+Response:
+```
+200 OK
+{
+    "data": {
+        "id": "723a5720-3bf4-4ecd-9b2e-a17eb509ebd8",
+        "username": "jdoughnut25",
+        "email": "john.doe@example.com",
+        "preferences": {
+            "follow_up_schedule": {
+                "follow_ups": [3, 7, 14], // days
+                "skip_weekends": true,
+                "skip_holidays": true,
+            },
+            "mode": "light",
+        },
+        "created_at": "2026-10-26T23:48:00Z",
+        "updated_at": "2026-10-26T23:48:00Z"
+    }
+}
+```
 
 ## Authentication & Session Management
 | Method | Endpoint | Purpose | Responses |
