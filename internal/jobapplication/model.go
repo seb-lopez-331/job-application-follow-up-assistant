@@ -3,43 +3,177 @@ package jobapplication
 import (
 	"errors"
 	"net/url"
+	"strings"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
-	"github.com/seb-lopez-331/job-application-follow-up-assistant/internal/user"
 )
 
-var ErrInvalidInput = errors.New("invalid job application input")
+var ErrJobApplicationDuplicate = errors.New("duplicate job application")
+var ErrJobApplicationFailedToInsert = errors.New("failed to insert job application")
+var ErrJobApplicationInvalidInput = errors.New("invalid job application j")
+var ErrJobApplicationNotFound = errors.New("job application not found")
+var ErrJobApplicationNotRead = errors.New("job application could not be read in database")
+var ErrJobApplicationFailedToDelete = errors.New("failed to delete job application")
+var ErrJobApplicationFailedToList = errors.New("failed to list job applications")
+
+var ErrCannotConvertToJobApplication = errors.New("cannot convert object to job application")
 
 type LocationSubmission struct {
 	Place string `validate:"required,iso3166_1_alpha2|postcode_iso3166_alpha2_field|numeric"`
 }
 
-type Job struct {
-	ID          uuid.UUID
-	CompanyName string
-	RoleTitle   string
-}
-
 type JobApplication struct {
-	ID             uuid.UUID
-	UserID         uuid.UUID
-	Job            Job
-	Stage          string
-	NextFollowUpOn *time.Time
-}
-
-type CreateJobApplicationInput struct {
+	ID          uuid.UUID
+	UserID      uuid.UUID
+	AppliedOn   time.Time
 	CompanyName string
 	RoleTitle   string
-	AppliedOn   time.Time
 
+	DatePosted      *time.Time
 	Description     *string
-	Notes           *string
 	JobURL          *url.URL
+	Notes           *string
 	Location        *string
 	PostedAt        *time.Time
+	WorkArrangement *string
 	Stage           *string
-	User            *user.User
-	WorkArrangement string
+	NextFollowUpOn  *time.Time
+}
+
+func (j *JobApplication) IsValid() bool {
+	companyName := j.CompanyName
+	roleTitle := j.RoleTitle
+	appliedOn := j.AppliedOn
+
+	if strings.TrimSpace(companyName) == "" {
+		return false
+	}
+	if strings.TrimSpace(roleTitle) == "" {
+		return false
+	}
+
+	// It's impossible to apply after registering the entry
+	if appliedOn.After(time.Now()) {
+		return false
+	}
+
+	// Process optional fields
+	location := j.Location
+	if location != nil {
+		submission := LocationSubmission{Place: *location}
+		validate := validator.New()
+		err := validate.Struct(submission)
+		if err != nil {
+			return false
+		}
+	}
+
+	postedAt := j.PostedAt
+	if postedAt != nil {
+		if postedAt.After(time.Now()) {
+			return false
+		}
+	}
+
+	stage := j.Stage
+	if stage != nil &&
+		*stage != "saved" &&
+		*stage != "applied" &&
+		*stage != "recruiter_screen" &&
+		*stage != "interviewing" &&
+		*stage != "offer" &&
+		*stage != "rejected" &&
+		*stage != "withdrawn" {
+		return false
+	} else if stage == nil {
+		str := "applied"
+		stage = &str
+	}
+
+	workArrangement := j.WorkArrangement
+	if *workArrangement != "hybrid" &&
+		*workArrangement != "remote" &&
+		*workArrangement != "on-site" {
+		return false
+	}
+
+	return true
+}
+
+func ToJobApplication(j any) (*JobApplication, error) {
+	switch app := j.(type) {
+	case nil:
+		return nil, ErrCannotConvertToJobApplication
+	case *JobApplication:
+		if app == nil {
+			return nil, ErrCannotConvertToJobApplication
+		}
+		return app, nil
+	case JobApplication:
+		return &app, nil
+	case CreateJobApplicationInput:
+		return &JobApplication{
+			AppliedOn:       app.AppliedOn,
+			CompanyName:     app.CompanyName,
+			RoleTitle:       app.RoleTitle,
+			DatePosted:      app.DatePosted,
+			Description:     app.Description,
+			JobURL:          app.JobURL,
+			Notes:           app.Notes,
+			NextFollowUpOn:  app.NextFollowUpOn,
+			Location:        app.Location,
+			PostedAt:        app.PostedAt,
+			Stage:           app.Stage,
+			WorkArrangement: app.WorkArrangement,
+		}, nil
+	case UpdateJobApplicationInput:
+		var companyName string
+		var roleTitle string
+		if app.CompanyName != nil {
+			companyName = *app.CompanyName
+		}
+		if app.RoleTitle != nil {
+			roleTitle = *app.RoleTitle
+		}
+		return &JobApplication{
+			AppliedOn:       time.Now(),
+			CompanyName:     companyName,
+			RoleTitle:       roleTitle,
+			DatePosted:      app.DatePosted,
+			Description:     app.Description,
+			JobURL:          app.JobURL,
+			Notes:           app.Notes,
+			NextFollowUpOn:  app.NextFollowUpOn,
+			Location:        app.Location,
+			PostedAt:        app.PostedAt,
+			Stage:           app.Stage,
+			WorkArrangement: app.WorkArrangement,
+		}, nil
+	case JobApplicationFilter:
+		var companyName string
+		var roleTitle string
+		if app.CompanyName != nil {
+			companyName = *app.CompanyName
+		}
+		if app.RoleTitle != nil {
+			roleTitle = *app.RoleTitle
+		}
+		return &JobApplication{
+			AppliedOn:       time.Now(),
+			CompanyName:     companyName,
+			RoleTitle:       roleTitle,
+			DatePosted:      app.DatePosted,
+			Description:     app.Description,
+			JobURL:          app.JobURL,
+			Notes:           app.Notes,
+			NextFollowUpOn:  app.NextFollowUpOn,
+			Location:        app.Location,
+			PostedAt:        app.PostedAt,
+			Stage:           app.Stage,
+			WorkArrangement: app.WorkArrangement,
+		}, nil
+	}
+	return nil, ErrCannotConvertToJobApplication
 }

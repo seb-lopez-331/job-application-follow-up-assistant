@@ -2,10 +2,10 @@ package jobapplication
 
 import (
 	"context"
-	"strings"
+	"fmt"
+	"net/url"
 	"time"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/seb-lopez-331/job-application-follow-up-assistant/internal/user"
 )
@@ -13,153 +13,179 @@ import (
 // The service depends on the Repository interface, not directly on PostgreSQL.
 // That makes it possible to unit-test scheduling and validation rules with
 // a fake repository
-type JobService interface {
-	Create(ctx context.Context, userID uuid.UUID,
-		input CreateJobInput) (*Job, error)
-
-	Get(ctx context.Context, id uuid.UUID) (*Job, error)
-
-	GetByCompanyNameAndJobTitle(ctx context.Context,
-		companyName, jobTitle string) (*Job, error)
-
-	Update(ctx context.Context, id uuid.UUID,
-		input UpdateJobInput) (*Job, error)
-
-	List(ctx context.Context, userID uuid.UUID,
-		filter JobFilter) ([]Job, error)
-}
-
 type JobApplicationService interface {
-	Create(ctx context.Context, userID uuid.UUID,
-		input CreateJobApplicationInput) (*JobApplication, error)
+	Create(
+		ctx context.Context,
+		input CreateJobApplicationInput,
+	) (*JobApplication, error)
 
-	Get(ctx context.Context, userID, id uuid.UUID) (*JobApplication, error)
+	Read(ctx context.Context, id uuid.UUID) (*JobApplication, error)
 
-	UpdateJobApplication(ctx context.Context, userID, id uuid.UUID,
-		input UpdateJobApplicationInput) (*JobApplication, error)
+	Update(
+		ctx context.Context,
+		id uuid.UUID,
+		input UpdateJobApplicationInput,
+	) (*JobApplication, error)
 
-	List(ctx context.Context, userID uuid.UUID,
-		filter JobApplicationFilter) ([]JobApplication, error)
+	List(
+		ctx context.Context,
+		filter JobApplicationFilter,
+	) ([]JobApplication, error)
+
+	Delete(ctx context.Context, id uuid.UUID) error
 }
 
-type jobService struct {
-	repo Repository
+type CreateJobApplicationInput struct {
+	AppliedOn   time.Time
+	CompanyName string
+	RoleTitle   string
+
+	DatePosted      *time.Time
+	Description     *string
+	JobURL          *url.URL
+	Notes           *string
+	NextFollowUpOn  *time.Time
+	Location        *string
+	PostedAt        *time.Time
+	Stage           *string
+	User            *user.User
+	WorkArrangement *string
+}
+
+type UpdateJobApplicationInput struct {
+	AppliedOn       *time.Time
+	CompanyName     *string
+	RoleTitle       *string
+	DatePosted      *time.Time
+	Description     *string
+	JobURL          *url.URL
+	Notes           *string
+	NextFollowUpOn  *time.Time
+	Location        *string
+	PostedAt        *time.Time
+	Stage           *string
+	User            *user.User
+	WorkArrangement *string
+}
+
+type JobApplicationFilter struct {
+	ID              *uuid.UUID
+	UserID          *uuid.UUID
+	AppliedOn       *time.Time
+	CompanyName     *string
+	RoleTitle       *string
+	DatePosted      *time.Time
+	Description     *string
+	JobURL          *url.URL
+	Notes           *string
+	Location        *string
+	PostedAt        *time.Time
+	WorkArrangement *string
+	Stage           *string
+	NextFollowUpOn  *time.Time
 }
 
 type jobApplicationService struct {
-	jobService jobService
-	repo       Repository
+	repo Repository
 }
 
-func NewJobApplicationService(
-	repo Repository,
-	jobService jobService,
-) *jobApplicationService {
-	return &jobApplicationService{jobService, repo}
-}
-
-func (s *jobService) GetByCompanyNameAndJobTitle(
-	ctx context.Context,
-	companyName, jobTitle string,
-) (*Job, error) {
-	if companyName == "" || jobTitle == "" {
-		return nil, ErrInvalidInput
-	}
-	return s.repo.GetByCompanyNameAndJobTitle(ctx, companyName, jobTitle)
+func NewJobApplicationService(repo Repository) *jobApplicationService {
+	return &jobApplicationService{repo: repo}
 }
 
 func (s *jobApplicationService) Create(
 	ctx context.Context,
-	userID uuid.UUID,
 	input CreateJobApplicationInput,
 ) (*JobApplication, error) {
-	if strings.TrimSpace(input.CompanyName) == "" ||
-		strings.TrimSpace(input.RoleTitle) == "" {
-		return nil, ErrInvalidInput
+	// Validate job application input
+	app, err := ToJobApplication(input)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrJobApplicationInvalidInput, err)
+	}
+	if !app.IsValid() {
+		return nil, ErrJobApplicationInvalidInput
 	}
 
-	companyName := input.CompanyName
-	roleTitle := input.RoleTitle
-	appliedOn := input.AppliedOn
-
-	if strings.TrimSpace(companyName) == "" {
-		return nil, ErrInvalidInput
-	}
-	if strings.TrimSpace(roleTitle) == "" {
-		return nil, ErrInvalidInput
-	}
-
-	// It's impossible to apply after registering the entry
-	if appliedOn.After(time.Now()) {
-		return nil, ErrInvalidInput
-	}
-
-	// Process optional fields
-	location := input.Location
-	if location != nil {
-		submission := LocationSubmission{Place: *location}
-		validate := validator.New()
-		err := validate.Struct(submission)
-		if err != nil {
-			return nil, ErrInvalidInput
-		}
-	}
-
-	postedAt := input.PostedAt
-	if postedAt != nil {
-		if postedAt.After(time.Now()) {
-			return nil, ErrInvalidInput
-		}
-	}
-
-	stage := input.Stage
-	if stage != nil &&
-		*stage != "saved" &&
-		*stage != "applied" &&
-		*stage != "recruiter_screen" &&
-		*stage != "interviewing" &&
-		*stage != "offer" &&
-		*stage != "rejected" &&
-		*stage != "withdrawn" {
-		return nil, ErrInvalidInput
-	} else if stage == nil {
-		str := "applied"
-		stage = &str
-	}
-
-	if input.User != nil {
-		userFromContext, ok := user.UserFromContext(ctx)
-		if !ok {
-			return nil, user.ErrUserNotFoundInCtx
-		}
-		if !userFromContext.IsAdmin {
-			return nil, user.ErrForbidden
-		}
-	}
-
-	workArrangement := input.WorkArrangement
-	if workArrangement != "hybrid" &&
-		workArrangement != "remote" &&
-		workArrangement != "on-site" {
-		return nil, ErrInvalidInput
-	}
-
-	// Get existing job in the DB
-	job, err := s.jobService.GetByCompanyNameAndJobTitle(ctx, companyName, roleTitle)
-
-	if *stage == "applied" {
+	if *input.Stage == "applied" {
 		due := addBusinessDays(input.AppliedOn, 7)
-		app.NextFollowUpOn = &due
+		input.NextFollowUpOn = &due
 	}
-
-	return s.repo.Create(ctx, app)
+	return s.repo.Create(ctx, input)
 }
 
-func (s *JobApplicationService) Get(
+func (s *jobApplicationService) Read(
 	ctx context.Context,
-	userID, id uuid.UUID,
-) (JobApplication, error) {
+	id uuid.UUID,
+) (*JobApplication, error) {
+	app, err := s.repo.Read(ctx, id)
+	if err != nil {
+		return nil, err
+	}
 
+	u, ok := user.FromContext(ctx)
+	if !ok {
+		return nil, user.ErrUserNotFoundInCtx
+	}
+
+	if !u.IsAdmin && app.UserID != u.ID {
+		return nil, user.ErrForbidden
+	}
+
+	return app, nil
+}
+
+func (s *jobApplicationService) Update(
+	ctx context.Context,
+	id uuid.UUID,
+	input UpdateJobApplicationInput,
+) (*JobApplication, error) {
+	// Ensure that the UpdateJobApplicationInput has at least one not null field
+	if input.IsEmpty() {
+		return nil, ErrJobApplicationInvalidInput
+	}
+	app, err := ToJobApplication(input)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrJobApplicationInvalidInput, err)
+	}
+	if !app.IsValid() {
+		return nil, ErrJobApplicationInvalidInput
+	}
+	return s.repo.Update(ctx, id, input)
+}
+
+func (s *jobApplicationService) Delete(ctx context.Context, id uuid.UUID) error {
+	u, ok := user.FromContext(ctx)
+	if !ok {
+		return user.ErrUserNotFoundInCtx
+	}
+
+	if !u.IsAdmin {
+		app, err := s.Read(ctx, id)
+		if err != nil {
+			return fmt.Errorf("%w: %v", ErrJobApplicationFailedToDelete, err)
+		}
+		if app.UserID != u.ID {
+			return user.ErrForbidden
+		}
+	}
+
+	return s.repo.Delete(ctx, id)
+}
+
+func (s *jobApplicationService) List(
+	ctx context.Context,
+	filter JobApplicationFilter,
+) ([]JobApplication, error) {
+	// Validate the filter
+	app, err := ToJobApplication(filter)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrJobApplicationInvalidInput, err)
+	}
+	if !app.IsValid() {
+		return nil, ErrJobApplicationInvalidInput
+	}
+
+	return s.repo.List(ctx, filter)
 }
 
 func addBusinessDays(start time.Time, days int) time.Time {
@@ -172,4 +198,20 @@ func addBusinessDays(start time.Time, days int) time.Time {
 		}
 	}
 	return current
+}
+
+func (input *UpdateJobApplicationInput) IsEmpty() bool {
+	return input.AppliedOn == nil &&
+		input.CompanyName == nil &&
+		input.RoleTitle == nil &&
+		input.DatePosted == nil &&
+		input.Description == nil &&
+		input.JobURL == nil &&
+		input.Notes == nil &&
+		input.NextFollowUpOn == nil &&
+		input.Location == nil &&
+		input.PostedAt == nil &&
+		input.Stage == nil &&
+		input.User == nil &&
+		input.WorkArrangement == nil
 }

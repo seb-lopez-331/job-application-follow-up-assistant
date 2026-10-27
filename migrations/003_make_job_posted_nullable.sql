@@ -1,0 +1,2 @@
+ALTER TABLE jobs
+ALTER COLUMN date_posted DROP NOT NULL;

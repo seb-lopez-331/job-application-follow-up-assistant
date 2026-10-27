@@ -49,7 +49,7 @@ exists for the same user, company, and role.
 | `posted_at` | String (date) | No | Date the job was posted, in `YYYY-MM-DD` format. |
 | `status` | String | No | Application status; defaults to `applied`. |
 | `user` | String | Admin-only | Username of the user the application belongs to. |
-| `work_arrangement` | String | No | One of `remote`, `hybrid`, or `on-site`. |
+| `work_arrangement` | String | Yes | One of `remote`, `hybrid`, or `on-site`. |
 
 The `user` field may be supplied only by an admin. It is included in the
 response only when the requester is an admin.
