@@ -8,5 +8,6 @@ import (
 )
 
 type Handler struct {
-	
+	service Service
 }
+
