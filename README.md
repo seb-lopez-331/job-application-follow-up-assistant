@@ -41,15 +41,15 @@ exists for the same user, company, and role.
 | :--- | :--- | :---: | :--- |
 | `company_name` | String | Yes | Company name. |
 | `role_title` | String | Yes | Job title. |
-| `location` | String | Yes | Job location. |
-| `work_arrangement` | String | Yes | One of `remote`, `hybrid`, or `on-site`. |
 | `applied_on` | String (date) | Yes | Date the user applied, in `YYYY-MM-DD` format. |
 | `description` | String | No | Job description. |
 | `notes` | String | No | Notes about the application. |
 | `job_url` | String (URI) | No | URL of the job posting. |
+| `location` | String | No | Job location. |
 | `posted_at` | String (date) | No | Date the job was posted, in `YYYY-MM-DD` format. |
 | `status` | String | No | Application status; defaults to `applied`. |
 | `user` | String | Admin-only | Username of the user the application belongs to. |
+| `work_arrangement` | String | No | One of `remote`, `hybrid`, or `on-site`. |
 
 The `user` field may be supplied only by an admin. It is included in the
 response only when the requester is an admin.
