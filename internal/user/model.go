@@ -15,6 +15,7 @@ type FollowUpSchedule struct {
 	FollowUpDaysAfter []int
 	SkipWeekends      bool
 	SkipHolidays      bool
+	Auto              bool
 	SelectedHolidays  *cal.Calendar
 }
 

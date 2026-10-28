@@ -11,8 +11,6 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/seb-lopez-331/job-application-follow-up-assistant/internal/user"
 )
 
 const (
@@ -76,16 +74,10 @@ func (r *PostgresRepository) Create(
 		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`
-
-	u, ok := user.FromContext(ctx)
-	if !ok {
-		return nil, user.ErrUserNotFoundInCtx
-	}
-
 	var app JobApplication
 
 	err := r.pool.QueryRow(ctx, query,
-		u.ID,
+		input.UserID,
 		input.AppliedOn,
 		input.CompanyName,
 		input.RoleTitle,
@@ -103,8 +95,11 @@ func (r *PostgresRepository) Create(
 
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // 23505 is unique_violation
-			return nil, ErrJobApplicationDuplicate
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" { // 23505 is unique_violation
+				return nil, ErrJobApplicationDuplicate
+			}
+			return nil, fmt.Errorf("%w: %v", ErrJobApplicationInvalidInput, err)
 		}
 
 		return nil, fmt.Errorf("%w: %v", ErrJobApplicationFailedToInsert, err)
@@ -135,24 +130,7 @@ func (r *PostgresRepository) Read(ctx context.Context, id uuid.UUID) (*JobApplic
 	`
 
 	var app JobApplication
-	err := r.pool.QueryRow(ctx, query, id).Scan(
-		app.ID,
-		app.UserID,
-		app.AppliedOn,
-		app.CompanyName,
-		app.RoleTitle,
-
-		app.DatePosted,
-		app.Description,
-		app.JobURL,
-		app.Notes,
-		app.NextFollowUpOn,
-		app.Location,
-		app.PostedAt,
-		app.WorkArrangement,
-		app.Stage,
-		app.NextFollowUpOn,
-	)
+	err := r.pool.QueryRow(ctx, query, id).Scan(&app)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrJobApplicationNotFound // Record not found
@@ -211,9 +189,8 @@ func (r *PostgresRepository) Update(
 		// Convert *url.URL to string for the DB storage
 		builder = builder.Set("job_url", input.JobURL.String())
 	}
-	if input.User != nil {
-		// Assuming your schema stores user_id on the job application
-		builder = builder.Set("user_id", input.User.ID)
+	if input.UserID != nil {
+		builder = builder.Set("user_id", input.UserID)
 	}
 
 	query, args, err := builder.ToSql()

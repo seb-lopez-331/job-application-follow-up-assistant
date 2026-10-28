@@ -8,13 +8,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/seb-lopez-331/job-application-follow-up-assistant/internal/followup"
 	"github.com/seb-lopez-331/job-application-follow-up-assistant/internal/user"
 )
 
 // The service depends on the Repository interface, not directly on PostgreSQL.
 // That makes it possible to unit-test scheduling and validation rules with
 // a fake repository
-type JobApplicationService interface {
+type Service interface {
 	Create(
 		ctx context.Context,
 		input CreateJobApplicationInput,
@@ -40,6 +41,7 @@ type CreateJobApplicationInput struct {
 	AppliedOn   time.Time
 	CompanyName string
 	RoleTitle   string
+	UserID      uuid.UUID
 
 	DatePosted      *time.Time
 	Description     *string
@@ -49,7 +51,6 @@ type CreateJobApplicationInput struct {
 	Location        *string
 	PostedAt        *time.Time
 	Stage           *string
-	User            *user.User
 	WorkArrangement *string
 }
 
@@ -65,8 +66,24 @@ type UpdateJobApplicationInput struct {
 	Location        *string
 	PostedAt        *time.Time
 	Stage           *string
-	User            *user.User
+	UserID          *uuid.UUID
 	WorkArrangement *string
+}
+
+type SetNullJobApplicationInput struct {
+	AppliedOn       bool
+	CompanyName     bool
+	RoleTitle       bool
+	DatePosted      bool
+	Description     bool
+	JobURL          bool
+	Notes           bool
+	NextFollowUpOn  bool
+	Location        bool
+	PostedAt        bool
+	Stage           bool
+	UserID          bool
+	WorkArrangement bool
 }
 
 type JobApplicationFilter struct {
@@ -91,15 +108,16 @@ type JobApplicationFilter struct {
 	PostedAfter   *time.Time `schema:"posted_after"`
 }
 
-type jobApplicationService struct {
-	repo Repository
+type JobApplicationService struct {
+	repo            Repository
+	followUpService followup.FollowUpService
 }
 
-func NewJobApplicationService(repo Repository) *jobApplicationService {
-	return &jobApplicationService{repo: repo}
+func NewJobApplicationService(repo Repository) *JobApplicationService {
+	return &JobApplicationService{repo: repo}
 }
 
-func (s *jobApplicationService) Create(
+func (s *JobApplicationService) Create(
 	ctx context.Context,
 	input CreateJobApplicationInput,
 ) (*JobApplication, error) {
@@ -121,15 +139,29 @@ func (s *jobApplicationService) Create(
 		return nil, user.ErrForbidden
 	}
 
-	if *input.Stage == "applied" {
+	if *input.Stage == "applied" && u.Preferences.FollowUpSchedule.Auto {
 		due := addBusinessDays(input.AppliedOn, *u)
 		input.NextFollowUpOn = &due
 	}
 
-	return s.repo.Create(ctx, input)
+	app, err = s.repo.Create(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	if app.NextFollowUpOn != nil {
+		_, err = s.followUpService.Create(ctx, followup.CreateFollowUpInput{
+			DueOn:            *app.NextFollowUpOn,
+			JobApplicationID: app.ID,
+		})
+
+		if err != nil {
+			s.Update(ctx, app.ID, UpdateJobApplicationInput{NextFollowUpOn: nil})
+		}
+	}
 }
 
-func (s *jobApplicationService) Read(
+func (s *JobApplicationService) Read(
 	ctx context.Context,
 	id uuid.UUID,
 ) (*JobApplication, error) {
@@ -150,7 +182,7 @@ func (s *jobApplicationService) Read(
 	return app, nil
 }
 
-func (s *jobApplicationService) Update(
+func (s *JobApplicationService) Update(
 	ctx context.Context,
 	id uuid.UUID,
 	input UpdateJobApplicationInput,
@@ -188,7 +220,7 @@ func (s *jobApplicationService) Update(
 	return s.repo.Update(ctx, id, input)
 }
 
-func (s *jobApplicationService) Delete(ctx context.Context, id uuid.UUID) error {
+func (s *JobApplicationService) Delete(ctx context.Context, id uuid.UUID) error {
 	u, ok := user.FromContext(ctx)
 	if !ok {
 		return user.ErrUserNotFoundInCtx
@@ -210,7 +242,7 @@ func (s *jobApplicationService) Delete(ctx context.Context, id uuid.UUID) error 
 	return s.repo.Delete(ctx, id)
 }
 
-func (s *jobApplicationService) List(
+func (s *JobApplicationService) List(
 	ctx context.Context,
 	filter JobApplicationFilter,
 ) ([]JobApplication, error) {
@@ -238,6 +270,13 @@ func (s *jobApplicationService) List(
 	}
 
 	return s.repo.List(ctx, filter)
+}
+
+func (s *JobApplicationService) SetNull(
+	ctx context.Context,
+	input SetNullJobApplicationInput,
+) (*JobApplication, error) {
+	// implement a SetNull in the repository
 }
 
 func addBusinessDays(start time.Time, u user.User) time.Time {
@@ -280,6 +319,6 @@ func (input *UpdateJobApplicationInput) IsEmpty() bool {
 		input.Location == nil &&
 		input.PostedAt == nil &&
 		input.Stage == nil &&
-		input.User == nil &&
+		input.UserID == nil &&
 		input.WorkArrangement == nil
 }

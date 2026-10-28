@@ -23,7 +23,7 @@ type Handler interface {
 }
 
 type handler struct {
-	service jobApplicationService
+	service JobApplicationService
 }
 
 var decoder = schema.NewDecoder()
@@ -31,7 +31,7 @@ var decoder = schema.NewDecoder()
 func init() {
 	// Register a universal layout handler for time.Time (e.g., "2026-10-27")
 	decoder.RegisterConverter(time.Time{}, func(value string) reflect.Value {
-		if t, err := time.Parse("2006-01-02", value); err == nil {
+		if t, err := time.Parse(time.DateOnly, value); err == nil {
 			return reflect.ValueOf(t)
 		}
 		return reflect.ValueOf(time.Time{})
@@ -46,7 +46,9 @@ func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input CreateJobApplicationInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+	jsonDecoder := json.NewDecoder(r.Body)
+	jsonDecoder.DisallowUnknownFields()
+	if err := jsonDecoder.Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid json")
 		return
 	}
@@ -112,7 +114,9 @@ func (h *handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input UpdateJobApplicationInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+	jsonDecoder := json.NewDecoder(r.Body)
+	jsonDecoder.DisallowUnknownFields()
+	if err := jsonDecoder.Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid json")
 		return
 	}

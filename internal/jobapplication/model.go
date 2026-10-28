@@ -10,16 +10,15 @@ import (
 	"github.com/google/uuid"
 )
 
-var ErrJobApplicationDuplicate = errors.New("duplicate job application")
-var ErrJobApplicationFailedToInsert = errors.New("failed to insert job application")
-var ErrJobApplicationInvalidInput = errors.New("invalid job application j")
-var ErrJobApplicationNotFound = errors.New("job application not found")
-var ErrJobApplicationNotRead = errors.New("job application could not be read in database")
-var ErrJobApplicationFailedToDelete = errors.New("failed to delete job application")
-var ErrJobApplicationFailedToList = errors.New("failed to list job applications")
-var ErrJobApplicationFailedToUpdate = errors.New("failed to update job application")
-
-var ErrCannotConvertToJobApplication = errors.New("cannot convert object to job application")
+var ErrJobApplicationDuplicate error = errors.New("duplicate job application")
+var ErrJobApplicationFailedToInsert error = errors.New("failed to insert job application")
+var ErrJobApplicationInvalidInput error = errors.New("invalid job application j")
+var ErrJobApplicationNotFound error = errors.New("job application not found")
+var ErrJobApplicationNotRead error = errors.New("job application could not be read in database")
+var ErrJobApplicationFailedToDelete error = errors.New("failed to delete job application")
+var ErrJobApplicationFailedToList error = errors.New("failed to list job applications")
+var ErrJobApplicationFailedToUpdate error = errors.New("failed to update job application")
+var ErrCannotConvertToJobApplication error = errors.New("cannot convert object to job application")
 
 type LocationSubmission struct {
 	Place string `validate:"required,iso3166_1_alpha2|postcode_iso3166_alpha2_field|numeric"`
