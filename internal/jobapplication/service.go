@@ -2,6 +2,7 @@ package jobapplication
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"time"
@@ -70,19 +71,24 @@ type UpdateJobApplicationInput struct {
 
 type JobApplicationFilter struct {
 	ID              *uuid.UUID
-	UserID          *uuid.UUID
-	AppliedOn       *time.Time
-	CompanyName     *string
-	RoleTitle       *string
-	DatePosted      *time.Time
-	Description     *string
-	JobURL          *url.URL
-	Notes           *string
-	Location        *string
-	PostedAt        *time.Time
-	WorkArrangement *string
-	Stage           *string
-	NextFollowUpOn  *time.Time
+	UserID          *uuid.UUID `schema:"user_id"`
+	AppliedOn       *time.Time `schema:"applied_on"`
+	CompanyName     *string    `schema:"company_name"`
+	RoleTitle       *string    `schema:"role_title"`
+	DatePosted      *time.Time `schema:"date_posted"`
+	Description     *string    `schema:"description"`
+	JobURL          *url.URL   `schema:"job_url"`
+	Notes           *string    `schema:"notes"`
+	Location        *string    `schema:"location"`
+	PostedAt        *time.Time `schema:"posted_at"`
+	WorkArrangement *string    `schema:"work_arrangement"`
+	Stage           *string    `schema:"stage"`
+	NextFollowUpOn  *time.Time `schema:"next_follow_up_on"`
+
+	AppliedBefore *time.Time `schema:"applied_before"`
+	AppliedAfter  *time.Time `schema:"applied_after"`
+	PostedBefore  *time.Time `schema:"posted_before"`
+	PostedAfter   *time.Time `schema:"posted_after"`
 }
 
 type jobApplicationService struct {
@@ -106,10 +112,20 @@ func (s *jobApplicationService) Create(
 		return nil, ErrJobApplicationInvalidInput
 	}
 
+	u, ok := user.FromContext(ctx)
+	if !ok {
+		return nil, user.ErrUserNotFoundInCtx
+	}
+
+	if !u.IsAdmin && app.UserID != u.ID {
+		return nil, user.ErrForbidden
+	}
+
 	if *input.Stage == "applied" {
-		due := addBusinessDays(input.AppliedOn, 7)
+		due := addBusinessDays(input.AppliedOn, *u)
 		input.NextFollowUpOn = &due
 	}
+
 	return s.repo.Create(ctx, input)
 }
 
@@ -150,6 +166,25 @@ func (s *jobApplicationService) Update(
 	if !app.IsValid() {
 		return nil, ErrJobApplicationInvalidInput
 	}
+
+	u, ok := user.FromContext(ctx)
+	if !ok {
+		return nil, user.ErrUserNotFoundInCtx
+	}
+	if !u.IsAdmin {
+		app, err := s.Read(ctx, id)
+		if err != nil {
+			if errors.Is(err, ErrJobApplicationNotFound) {
+				return nil, ErrJobApplicationNotFound
+			}
+			return nil, fmt.Errorf("%w: %v", ErrJobApplicationFailedToUpdate, err)
+		}
+
+		if app.UserID != u.ID {
+			return nil, user.ErrForbidden
+		}
+	}
+
 	return s.repo.Update(ctx, id, input)
 }
 
@@ -162,6 +197,9 @@ func (s *jobApplicationService) Delete(ctx context.Context, id uuid.UUID) error 
 	if !u.IsAdmin {
 		app, err := s.Read(ctx, id)
 		if err != nil {
+			if errors.Is(err, ErrJobApplicationNotFound) {
+				return nil
+			}
 			return fmt.Errorf("%w: %v", ErrJobApplicationFailedToDelete, err)
 		}
 		if app.UserID != u.ID {
@@ -185,15 +223,45 @@ func (s *jobApplicationService) List(
 		return nil, ErrJobApplicationInvalidInput
 	}
 
+	// Take the most restrictive filter if both are provided
+	if filter.AppliedOn != nil {
+		filter.AppliedBefore = nil
+		filter.AppliedAfter = nil
+	} else {
+		filter.AppliedOn = nil
+	}
+	if filter.DatePosted != nil {
+		filter.PostedBefore = nil
+		filter.PostedAfter = nil
+	} else {
+		filter.DatePosted = nil
+	}
+
 	return s.repo.List(ctx, filter)
 }
 
-func addBusinessDays(start time.Time, days int) time.Time {
+func addBusinessDays(start time.Time, u user.User) time.Time {
+	pref := u.Preferences
+	skipHolidays := pref.FollowUpSchedule.SkipHolidays
+	skipWeekends := pref.FollowUpSchedule.SkipWeekends
+	holidays := pref.FollowUpSchedule.SelectedHolidays
+	days := pref.FollowUpSchedule.FollowUpDaysAfter[0] // for first follow up
+
 	current := start
 	for added := 0; added < days; {
 		current = current.AddDate(0, 0, 1)
-		if current.Weekday() != time.Saturday &&
-			current.Weekday() != time.Sunday {
+
+		// If both holiday and weekend conditions are met, don't skip
+		weekendCondition := skipWeekends ||
+			(current.Weekday() != time.Saturday && current.Weekday() != time.Sunday)
+
+		holidayCondition := skipHolidays
+		if !skipHolidays {
+			actual, observed, _ := holidays.IsHoliday(current)
+			holidayCondition = actual || observed
+		}
+
+		if holidayCondition || weekendCondition {
 			added++
 		}
 	}

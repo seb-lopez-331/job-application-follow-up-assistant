@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rickar/cal/v2"
 )
 
 var ErrUserNotFoundInCtx = errors.New("user not found in context")
@@ -14,6 +15,7 @@ type FollowUpSchedule struct {
 	FollowUpDaysAfter []int
 	SkipWeekends      bool
 	SkipHolidays      bool
+	SelectedHolidays  *cal.Calendar
 }
 
 type Preferences struct {

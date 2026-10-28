@@ -218,6 +218,9 @@ func (r *PostgresRepository) Update(
 
 	query, args, err := builder.ToSql()
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrJobApplicationNotFound // Record not found
+		}
 		return nil, fmt.Errorf("%w: %v", ErrJobApplicationFailedToInsert, err)
 	}
 
@@ -273,6 +276,13 @@ func (r *PostgresRepository) List(
 
 	if filter.AppliedOn != nil {
 		builder = builder.Where(squirrel.Eq{ColAppliedOn: filter.AppliedOn})
+	} else {
+		if filter.AppliedBefore != nil {
+			builder = builder.Where(squirrel.Lt{ColAppliedOn: filter.AppliedBefore})
+		}
+		if filter.AppliedAfter != nil {
+			builder = builder.Where(squirrel.Gt{ColAppliedOn: filter.AppliedAfter})
+		}
 	}
 
 	if filter.CompanyName != nil {
@@ -285,6 +295,13 @@ func (r *PostgresRepository) List(
 
 	if filter.DatePosted != nil {
 		builder = builder.Where(squirrel.Eq{ColDatePosted: filter.DatePosted})
+	} else {
+		if filter.PostedBefore != nil {
+			builder = builder.Where(squirrel.Lt{ColDatePosted: filter.PostedBefore})
+		}
+		if filter.PostedAfter != nil {
+			builder = builder.Where(squirrel.Gt{ColDatePosted: filter.PostedAfter})
+		}
 	}
 
 	if filter.Description != nil {

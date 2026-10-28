@@ -9,7 +9,7 @@ These endpoints manage registered job applications.
 
 | Method | Endpoint | Purpose | Responses |
 | -------| -------- | ------- | ------- |
-| `POST` | `/api/v1/applications` | Register a job application | `201`, `400`, `401`, `403`, `409` |
+| `POST` | `/api/v1/applications` | Register a job application | `201`, `400`, `401`, `403`, `409`, `422` |
 | `GET` | `/api/v1/applications` | List job applications with filters | `200`, `401`, `403` |
 | `GET` | `/api/v1/applications/{id}` | Get job application by ID | `200`, `400`, `401`, `403`, `404` |
 | `PATCH` | `/api/v1/applications/{id}` | Update selected fields | `200`, `400`, `401`, `403`, `404` |
@@ -18,10 +18,11 @@ These endpoints manage registered job applications.
 ### Register a job application
 Registers a job application. The request body must be valid JSON and include
 all required fields listed below. Returns `201 Created` on success,
-`400 Bad Request` if the body is invalid, `401 Unauthorized` if the client is
+`400 Bad Request` if the body has any invalid parameters, `401 Unauthorized` if the client is
 unauthenticated, `403 Forbidden` if a non-admin client attempts to create an
-application for another user, or `409 Conflict` if an application already
-exists for the same user, company, and role.
+application for another user, `409 Conflict` if an application already
+exists for the same user, company, and role, or `422 Unprocessable Entity` if
+the body has missing or invalid fields.
 
 ```json
 {
@@ -350,7 +351,7 @@ These endpoints manage job application follow-ups.
 
 | Method | Endpoint | Purpose | Responses |
 | -------| -------- | ------- | ------- |
-| `POST` | `/api/v1/applications/{id}/follow-ups` | Schedule a follow-up | `201`, `400`, `401`, `403` |
+| `POST` | `/api/v1/applications/{id}/follow-ups` | Schedule a follow-up | `201`, `400`, `401`, `403`, `422` |
 | `GET` | `/api/v1/follow-ups` | List pending or due follow-ups | `200`, `401`, `403` |
 | `GET` | `/api/v1/follow-ups/{id}` | Get a specific follow-up | `200`, `400`, `401`, `403`, `404` |
 | `PATCH` | `/api/v1/follow-ups/{id}` | Reschedule or update a follow-up | `200`, `400`, `401`, `403`, `404` |
@@ -358,9 +359,10 @@ These endpoints manage job application follow-ups.
 
 ### Schedule a follow-up
 Creates a follow-up for the application identified by `{id}`. Returns
-`201 Created` on success, `400 Bad Request` if the request body is invalid,
-`401 Unauthorized` if the client is unauthenticated, or `403 Forbidden` if the
-application belongs to another user and the requester is not an admin.
+`201 Created` on success, `400 Bad Request` if the request body has invalid parameters,
+`401 Unauthorized` if the client is unauthenticated, `403 Forbidden` if the
+application belongs to another user and the requester is not an admin, or `422 Unprocessable Entity` if
+the fields are invalid.
 
 ```json
 {
@@ -579,7 +581,7 @@ These endpoints provide dashboard data and AI-assisted message generation.
 | Method | Endpoint | Purpose | Responses |
 | ------ | -------- | ------- | ------- |
 | `GET` | `/api/v1/dashboard` | Return application counts and application summaries. | `200`, `401` |
-| `POST` | `/api/v1/applications/{id}/generate-follow-up` | Generate a message draft. | `200`, `400`, `401`, `403`, `404` |
+| `POST` | `/api/v1/applications/{id}/generate-follow-up` | Generate a message draft. | `200`, `400`, `401`, `403`, `404`, `422` |
 
 ### Return the dashboard summary
 Returns application counts and application summaries for the dashboard. Returns
@@ -637,9 +639,10 @@ Status: 200 OK
 ### Generate a message draft
 Generates a message draft using an LLM. The request body must be valid JSON and
 include both required fields. Returns `200 OK` on success, `400 Bad Request`
-if the body or UUID are invalid, `401 Unauthorized` if the client is unauthenticated,
+if the body has invalid parameters or UUID are invalid, `401 Unauthorized` if the client is unauthenticated,
 `403 Forbidden` if a non-admin user attempts to generate a draft for another
-user's application, or `404 Not Found` if the application does not exist.
+user's application, `404 Not Found` if the application does not exist, or `422 Unprocessable Entity`
+if the body has invalid or missing fields.
 
 ```json
 {

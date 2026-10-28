@@ -17,6 +17,7 @@ var ErrJobApplicationNotFound = errors.New("job application not found")
 var ErrJobApplicationNotRead = errors.New("job application could not be read in database")
 var ErrJobApplicationFailedToDelete = errors.New("failed to delete job application")
 var ErrJobApplicationFailedToList = errors.New("failed to list job applications")
+var ErrJobApplicationFailedToUpdate = errors.New("failed to update job application")
 
 var ErrCannotConvertToJobApplication = errors.New("cannot convert object to job application")
 
