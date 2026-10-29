@@ -48,7 +48,7 @@ the body has missing or invalid fields.
 | `job_url` | String (URI) | No | URL of the job posting. |
 | `location` | String | No | Job location. |
 | `posted_at` | String (date) | No | Date the job was posted, in `YYYY-MM-DD` format. |
-| `status` | String | No | Application status; defaults to `applied`. |
+| `stage` | String | No | Application stage; defaults to `applied`. |
 | `user` | String | Admin-only | Username of the user the application belongs to. |
 | `work_arrangement` | String | Yes | One of `remote`, `hybrid`, or `on-site`. |
 
@@ -131,12 +131,12 @@ Lists the authenticated user's applications. Admins may list applications
 across users. Supported query parameters are:
 
 ```
-GET /api/v1/applications?status=applied&search=platform&limit=20&cursor=eyJvZmZzZXQiOjIwfQ
+GET /api/v1/applications?stage=applied&search=platform&limit=20&cursor=eyJvZmZzZXQiOjIwfQ
 ```
 
 | Parameter | Description |
 | :--- | :--- |
-| `status` | Filter by application status. |
+| `stage` | Filter by application stage. |
 | `search` | Search application company names and role titles. |
 | `limit` | Maximum number of results to return. |
 | `cursor` | Continue listing from a cursor returned by the API. |
@@ -196,7 +196,7 @@ Status: 200 OK
 
 Request with filter:
 ```
-GET /api/v1/applications?status=interviewing
+GET /api/v1/applications?stage=interviewing
 ```
 
 Response with filter:
@@ -265,7 +265,7 @@ result in `400 Bad Request`. A successful update returns `200 OK`.
 | `notes` | String | Notes about the application. |
 | `job_url` | String (URI) | URL of the job posting. |
 | `posted_at` | String (date) | Date the job was posted, in `YYYY-MM-DD` format. |
-| `status` | String | Application status. |
+| `stage` | String | Application stage. |
 
 Returns `401 Unauthorized` if the client is unauthenticated, `403 Forbidden`
 if a non-admin user requests another user's application, or `404 Not Found` if
@@ -392,7 +392,7 @@ Status: 201 Created
         "id": "c66a3e81-27c0-4b10-b47d-b1f3b2f20b31",
         "application_id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
         "due_on": "2026-11-04",
-        "stage": "pending",
+        "status": "pending",
         "message_draft": null,
         "sent_at": null,
         "completed_at": null
@@ -429,7 +429,7 @@ Status: 200 OK
             "id": "c66a3e81-27c0-4b10-b47d-b1f3b2f20b31",
             "application_id": "8e34296b-ef82-4d6a-9b1f-30c49e3f0c11",
             "due_on": "2026-11-04",
-            "stage": "pending",
+            "status": "pending",
             "message_draft": null,
             "sent_at": null,
             "completed_at": null
@@ -438,7 +438,7 @@ Status: 200 OK
             "id": "3c12c4f2-e79e-4f16-bca9-a50273fc7e16",
             "application_id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
             "due_on": "2026-11-10",
-            "stage": "pending",
+            "status": "pending",
             "message_draft": null,
             "sent_at": null,
             "completed_at": null
@@ -447,7 +447,7 @@ Status: 200 OK
             "id": "e9e4c11e-16cf-49e8-96a6-d453d030c233",
             "application_id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
             "due_on": "2026-10-31",
-            "stage": "pending",
+            "status": "pending",
             "message_draft": null,
             "sent_at": null,
             "completed_at": null
@@ -476,7 +476,7 @@ Status: 200 OK
         "id": "3c12c4f2-e79e-4f16-bca9-a50273fc7e16",
         "application_id": "5213fcaf-15ea-4892-8419-d0d7077ebe16",
         "due_on": "2026-11-10",
-        "stage": "pending",
+        "status": "pending",
         "message_draft": null,
         "sent_at": null,
         "completed_at": null
@@ -515,7 +515,7 @@ Status: 200 OK
         "id": "e9e4c11e-16cf-49e8-96a6-d453d030c233",
         "application_id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
         "due_on": "2026-12-01",
-        "stage": "pending",
+        "status": "pending",
         "message_draft": null,
         "sent_at": null,
         "completed_at": null
@@ -539,7 +539,7 @@ Status: 200 OK
         "id": "e9e4c11e-16cf-49e8-96a6-d453d030c233",
         "application_id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
         "due_on": "2026-12-01",
-        "stage": "pending",
+        "status": "pending",
         "message_draft": "Hello [Recruiter Name], I hope you are doing well. I wanted to follow up on my application and ask whether there are any updates. Thank you for your time.",
         "sent_at": null,
         "completed_at": null
@@ -567,7 +567,7 @@ Status: 200 OK
         "id": "e9e4c11e-16cf-49e8-96a6-d453d030c233",
         "application_id": "d02d9a11-f57b-46ab-9cf6-52d4c4992630",
         "due_on": "2026-12-01",
-        "stage": "completed",
+        "status": "completed",
         "message_draft": "Hello [Recruiter Name], I hope you are doing well. I wanted to follow up on my application and ask whether there are any updates. Thank you for your time.",
         "sent_at": null,
         "completed_at": "2026-12-01T13:23:00Z"
