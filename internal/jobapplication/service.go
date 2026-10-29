@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/seb-lopez-331/job-application-follow-up-assistant/internal/followup"
 	"github.com/seb-lopez-331/job-application-follow-up-assistant/internal/user"
 )
 
@@ -70,22 +69,6 @@ type UpdateJobApplicationInput struct {
 	WorkArrangement *string
 }
 
-type SetNullJobApplicationInput struct {
-	AppliedOn       bool
-	CompanyName     bool
-	RoleTitle       bool
-	DatePosted      bool
-	Description     bool
-	JobURL          bool
-	Notes           bool
-	NextFollowUpOn  bool
-	Location        bool
-	PostedAt        bool
-	Stage           bool
-	UserID          bool
-	WorkArrangement bool
-}
-
 type JobApplicationFilter struct {
 	ID              *uuid.UUID
 	UserID          *uuid.UUID `schema:"user_id"`
@@ -109,8 +92,7 @@ type JobApplicationFilter struct {
 }
 
 type JobApplicationService struct {
-	repo            Repository
-	followUpService followup.FollowUpService
+	repo Repository
 }
 
 func NewJobApplicationService(repo Repository) *JobApplicationService {
@@ -142,23 +124,16 @@ func (s *JobApplicationService) Create(
 	if *input.Stage == "applied" && u.Preferences.FollowUpSchedule.Auto {
 		due := addBusinessDays(input.AppliedOn, *u)
 		input.NextFollowUpOn = &due
+		app, err = s.repo.CreateWithFollowUp(ctx, input, due)
+	} else {
+		app, err = s.repo.Create(ctx, input)
 	}
 
-	app, err = s.repo.Create(ctx, input)
 	if err != nil {
 		return nil, err
 	}
 
-	if app.NextFollowUpOn != nil {
-		_, err = s.followUpService.Create(ctx, followup.CreateFollowUpInput{
-			DueOn:            *app.NextFollowUpOn,
-			JobApplicationID: app.ID,
-		})
-
-		if err != nil {
-			s.Update(ctx, app.ID, UpdateJobApplicationInput{NextFollowUpOn: nil})
-		}
-	}
+	return app, nil
 }
 
 func (s *JobApplicationService) Read(
@@ -272,11 +247,39 @@ func (s *JobApplicationService) List(
 	return s.repo.List(ctx, filter)
 }
 
-func (s *JobApplicationService) SetNull(
+func (s *JobApplicationService) UpdateSetNull(
 	ctx context.Context,
-	input SetNullJobApplicationInput,
+	id uuid.UUID,
+	input UpdateJobApplicationInput,
 ) (*JobApplication, error) {
 	// implement a SetNull in the repository
+	app, err := ToJobApplication(input)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrJobApplicationInvalidInput, err)
+	}
+	if !app.IsValid() {
+		return nil, ErrJobApplicationInvalidInput
+	}
+
+	u, ok := user.FromContext(ctx)
+	if !ok {
+		return nil, user.ErrUserNotFoundInCtx
+	}
+	if !u.IsAdmin {
+		app, err := s.Read(ctx, id)
+		if err != nil {
+			if errors.Is(err, ErrJobApplicationNotFound) {
+				return nil, ErrJobApplicationNotFound
+			}
+			return nil, fmt.Errorf("%w: %v", ErrJobApplicationFailedToUpdate, err)
+		}
+
+		if app.UserID != u.ID {
+			return nil, user.ErrForbidden
+		}
+	}
+
+	return s.repo.UpdateSetNull(ctx, id, input)
 }
 
 func addBusinessDays(start time.Time, u user.User) time.Time {

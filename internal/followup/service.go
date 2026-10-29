@@ -3,6 +3,7 @@ package followup
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,7 +22,8 @@ type Service interface {
 
 	Schedule(ctx context.Context, appID uuid.UUID, dueOn time.Time) (*FollowUp, error)
 	Complete(ctx context.Context, followUpID uuid.UUID) error
-	ListDue(ctx context.Context, dueOn time.Time) ([]FollowUp, error)
+	ListDue(ctx context.Context) ([]FollowUp, error)
+	ListDueBy(ctx context.Context, dueOn time.Time) ([]FollowUp, error)
 }
 
 type FollowUpService struct {
@@ -126,6 +128,22 @@ func (s *FollowUpService) Update(
 	return s.repo.Update(ctx, id, input)
 }
 
+func (s *FollowUpService) Delete(ctx context.Context, id uuid.UUID) error {
+	// Check if a user has access
+	_, err := s.Read(ctx, id)
+	if err != nil {
+		if errors.Is(err, user.ErrForbidden) || !errors.Is(err, ErrFollowUpNotFound) {
+			return err
+		}
+		return nil
+	}
+	err = s.repo.Delete(ctx, id)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrFollowUpFailedToDelete, err)
+	}
+	return nil
+}
+
 func (s *FollowUpService) Schedule(
 	ctx context.Context,
 	appID uuid.UUID,
@@ -145,8 +163,29 @@ func (s *FollowUpService) Complete(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-func (s *FollowUpService) ListDue(ctx context.Context, dueOn time.Time) ([]FollowUp, error) {
-	return s.ListDue(ctx, dueOn)
+func (s *FollowUpService) ListDue(ctx context.Context) ([]FollowUp, error) {
+	u, ok := user.FromContext(ctx)
+	if !ok {
+		return nil, user.ErrUserNotFoundInCtx
+	}
+	if u.IsAdmin {
+		return s.repo.ListDueForAllUsers(ctx)
+	}
+	return s.repo.ListDue(ctx)
+}
+
+func (s *FollowUpService) ListDueBy(
+	ctx context.Context,
+	dueOn time.Time,
+) ([]FollowUp, error) {
+	u, ok := user.FromContext(ctx)
+	if !ok {
+		return nil, user.ErrUserNotFoundInCtx
+	}
+	if u.IsAdmin {
+		return s.repo.ListDueByForAllUsers(ctx, dueOn)
+	}
+	return s.repo.ListDueBy(ctx, dueOn)
 }
 
 func (input *UpdateFollowUpInput) IsEmpty() bool {

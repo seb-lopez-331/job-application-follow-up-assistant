@@ -233,6 +233,7 @@ func writeError(w http.ResponseWriter, statusCode int, message string) {
 
 func writeJSON(w http.ResponseWriter, statusCode int, v any) {
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
 	err := json.NewEncoder(w).Encode(struct {
 		Data any `json:"data"`
 	}{Data: v})

@@ -5,10 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"time"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -33,8 +34,18 @@ const (
 
 type Repository interface {
 	Create(ctx context.Context, input CreateJobApplicationInput) (*JobApplication, error)
+	CreateWithFollowUp(
+		ctx context.Context,
+		input CreateJobApplicationInput,
+		dueOn time.Time,
+	) (*JobApplication, error)
 	Read(ctx context.Context, id uuid.UUID) (*JobApplication, error)
 	Update(
+		ctx context.Context,
+		id uuid.UUID,
+		input UpdateJobApplicationInput,
+	) (*JobApplication, error)
+	UpdateSetNull(
 		ctx context.Context,
 		id uuid.UUID,
 		input UpdateJobApplicationInput,
@@ -106,6 +117,73 @@ func (r *PostgresRepository) Create(
 	}
 
 	return &app, nil
+}
+
+func (r *PostgresRepository) CreateWithFollowUp(
+	ctx context.Context,
+	input CreateJobApplicationInput,
+	dueOn time.Time,
+) (*JobApplication, error) {
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	app := &JobApplication{}
+	query := `
+		INSERT INTO job_applications (
+			user_id,
+			applied_on
+			company_name,
+			role_title,
+
+			date_posted,
+			descr,
+			job_url,
+			notes,
+			next_follow_up_on,
+			loc,
+			posted_at,
+			stage,
+			work_arrangement
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`
+	err = tx.QueryRow(ctx, query,
+		input.UserID,
+		input.AppliedOn,
+		input.CompanyName,
+		input.RoleTitle,
+
+		input.DatePosted,
+		input.Description,
+		input.JobURL,
+		input.Notes,
+		input.NextFollowUpOn,
+		input.Location,
+		input.PostedAt,
+		input.Stage,
+		input.WorkArrangement,
+	).Scan(&app)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrJobApplicationFailedToInsert)
+	}
+
+	query = `
+		INSERT INTO follow_ups (job_application_id, due_on)
+		VALUES ($1, $2)
+	`
+	_, err = tx.Exec(ctx, query, app.ID, dueOn)
+	if err != nil {
+		return nil, fmt.Errorf("error inserting follow up:", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("committing application and follow up:", err)
+	}
+
+	return app, nil
 }
 
 func (r *PostgresRepository) Read(ctx context.Context, id uuid.UUID) (*JobApplication, error) {
@@ -206,6 +284,56 @@ func (r *PostgresRepository) Update(
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrJobApplicationFailedToInsert, err)
 	}
+	return &app, nil
+}
+
+func (r *PostgresRepository) UpdateSetNull(
+	ctx context.Context,
+	id uuid.UUID,
+	input UpdateJobApplicationInput,
+) (*JobApplication, error) {
+	query := `
+		UPDATE job_applications
+		SET
+			applied_on = $1
+			company_name = $2,
+			role_title = $3,
+			date_posted = $4,
+			descr = $5,
+			job_url = $6,
+			notes = $7,
+			next_follow_up_on = $8,
+			loc = $9,
+			posted_at = $10,
+			work_arrangement = $11,
+			stage = $12
+		WHERE id = $13
+	`
+
+	var app JobApplication
+	err := r.pool.QueryRow(ctx, query,
+		input.AppliedOn,
+		input.CompanyName,
+		input.RoleTitle,
+		input.DatePosted,
+		input.Description,
+		input.JobURL,
+		input.Notes,
+		input.NextFollowUpOn,
+		input.Location,
+		input.PostedAt,
+		input.WorkArrangement,
+		input.Stage,
+		id,
+	).Scan(&app)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrJobApplicationNotFound // Record not found
+		}
+		return nil, fmt.Errorf("%w: %v", ErrJobApplicationFailedToUpdate, err)
+	}
+
 	return &app, nil
 }
 
