@@ -146,7 +146,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `DELETE FROM follow_ups WHERE id = $1;`
 
 	if _, err := r.pool.Exec(ctx, query, id); err != nil {
-		return fmt.Errorf("%w: %v", ErrFollowUpFailedToDelete)
+		return fmt.Errorf("%w: %v", ErrFollowUpFailedToDelete, err)
 	}
 
 	return nil

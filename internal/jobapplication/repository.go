@@ -167,7 +167,7 @@ func (r *PostgresRepository) CreateWithFollowUp(
 		input.WorkArrangement,
 	).Scan(&app)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrJobApplicationFailedToInsert)
+		return nil, fmt.Errorf("%w: %v", ErrJobApplicationFailedToInsert, err)
 	}
 
 	query = `
@@ -176,11 +176,11 @@ func (r *PostgresRepository) CreateWithFollowUp(
 	`
 	_, err = tx.Exec(ctx, query, app.ID, dueOn)
 	if err != nil {
-		return nil, fmt.Errorf("error inserting follow up:", err)
+		return nil, fmt.Errorf("error inserting follow up: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("committing application and follow up:", err)
+		return nil, fmt.Errorf("committing application and follow up: %w", err)
 	}
 
 	return app, nil
