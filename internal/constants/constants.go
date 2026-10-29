@@ -1,5 +1,6 @@
 package constants
 
-type ctxKey int
+type ctxKey string
 
-const UserKey ctxKey = iota
+const UserKey ctxKey = "user"
+const SessionUserKey ctxKey = "session_user"

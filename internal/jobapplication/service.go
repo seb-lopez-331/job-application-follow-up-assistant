@@ -95,8 +95,8 @@ type JobApplicationService struct {
 	repo Repository
 }
 
-func NewJobApplicationService(repo Repository) *JobApplicationService {
-	return &JobApplicationService{repo: repo}
+func NewService(repo Repository) JobApplicationService {
+	return JobApplicationService{repo: repo}
 }
 
 func (s *JobApplicationService) Create(

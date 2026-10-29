@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/schema"
+	"github.com/seb-lopez-331/job-application-follow-up-assistant/internal/httpresponse"
 	"github.com/seb-lopez-331/job-application-follow-up-assistant/internal/user"
 )
 
@@ -26,22 +27,14 @@ type handler struct {
 	service JobApplicationService
 }
 
-var decoder = schema.NewDecoder()
-
-func init() {
-	// Register a universal layout handler for time.Time (e.g., "2026-10-27")
-	decoder.RegisterConverter(time.Time{}, func(value string) reflect.Value {
-		if t, err := time.Parse(time.DateOnly, value); err == nil {
-			return reflect.ValueOf(t)
-		}
-		return reflect.ValueOf(time.Time{})
-	})
+func NewHandler(s JobApplicationService) handler {
+	return handler{service: s}
 }
 
 func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 	_, err := authenticatedUserID(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "user not found in context")
+		httpresponse.WriteError(w, http.StatusUnauthorized, "user not found in context")
 		return
 	}
 
@@ -49,67 +42,67 @@ func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 	jsonDecoder := json.NewDecoder(r.Body)
 	jsonDecoder.DisallowUnknownFields()
 	if err := jsonDecoder.Decode(&input); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid json")
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid json")
 		return
 	}
 
 	app, err := h.service.Create(r.Context(), input)
 	if err != nil {
 		if errors.Is(err, user.ErrForbidden) {
-			writeError(w, http.StatusForbidden, "forbidden")
+			httpresponse.WriteError(w, http.StatusForbidden, "forbidden")
 			return
 		}
 		if errors.Is(err, ErrJobApplicationDuplicate) {
-			writeError(w, http.StatusConflict, "job application already exists")
+			httpresponse.WriteError(w, http.StatusConflict, "job application already exists")
 			return
 		}
 		if errors.Is(err, ErrJobApplicationInvalidInput) {
-			writeError(w, http.StatusUnprocessableEntity, "invalid input")
+			httpresponse.WriteError(w, http.StatusUnprocessableEntity, "invalid input")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "internal error")
+		httpresponse.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, app)
+	httpresponse.WriteJSON(w, http.StatusCreated, app)
 }
 
 func (h *handler) Read(w http.ResponseWriter, r *http.Request) {
 	_, err := authenticatedUserID(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "user not found in context")
+		httpresponse.WriteError(w, http.StatusUnauthorized, "user not found in context")
 		return
 	}
 
 	idStr := r.PathValue("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid uuid")
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid uuid")
 		return
 	}
 
 	app, err := h.service.Read(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrJobApplicationNotFound) {
-			writeError(w, http.StatusNotFound, "job application not found")
+			httpresponse.WriteError(w, http.StatusNotFound, "job application not found")
 			return
 		}
 		if errors.Is(err, user.ErrForbidden) {
-			writeError(w, http.StatusForbidden, "forbidden")
+			httpresponse.WriteError(w, http.StatusForbidden, "forbidden")
 			return
 		}
 		/* internal database error */
-		writeError(w, http.StatusInternalServerError, "internal error")
+		httpresponse.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, app)
+	httpresponse.WriteJSON(w, http.StatusOK, app)
 }
 
 func (h *handler) Update(w http.ResponseWriter, r *http.Request) {
 	_, err := authenticatedUserID(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "user not found in context")
+		httpresponse.WriteError(w, http.StatusUnauthorized, "user not found in context")
 		return
 	}
 
@@ -117,52 +110,52 @@ func (h *handler) Update(w http.ResponseWriter, r *http.Request) {
 	jsonDecoder := json.NewDecoder(r.Body)
 	jsonDecoder.DisallowUnknownFields()
 	if err := jsonDecoder.Decode(&input); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid json")
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid json")
 		return
 	}
 
 	idStr := r.PathValue("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid uuid")
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid uuid")
 		return
 	}
 
 	app, err := h.service.Update(r.Context(), id, input)
 	if err != nil {
 		if errors.Is(err, ErrJobApplicationInvalidInput) {
-			writeError(w, http.StatusUnprocessableEntity, "invalid json")
+			httpresponse.WriteError(w, http.StatusUnprocessableEntity, "invalid json")
 			return
 		}
 		if errors.Is(err, ErrJobApplicationNotFound) {
-			writeError(w, http.StatusNotFound, "job application not found")
+			httpresponse.WriteError(w, http.StatusNotFound, "job application not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "internal server error")
+		httpresponse.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, app)
+	httpresponse.WriteJSON(w, http.StatusOK, app)
 }
 
 func (h *handler) Delete(w http.ResponseWriter, r *http.Request) {
 	_, err := authenticatedUserID(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "user not found in context")
+		httpresponse.WriteError(w, http.StatusUnauthorized, "user not found in context")
 		return
 	}
 
 	idStr := r.PathValue("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid uuid")
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid uuid")
 		return
 	}
 
 	err = h.service.Delete(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, user.ErrForbidden) {
-			writeError(w, http.StatusForbidden, "forbidden")
+			httpresponse.WriteError(w, http.StatusForbidden, "forbidden")
 			return
 		}
 	}
@@ -173,15 +166,27 @@ func (h *handler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *handler) List(w http.ResponseWriter, r *http.Request) {
 	_, err := authenticatedUserID(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "user not found in context")
+		httpresponse.WriteError(w, http.StatusUnauthorized, "user not found in context")
 		return
 	}
+
+	var decoder = schema.NewDecoder()
+	decoder.RegisterConverter(time.Time{}, func(value string) reflect.Value {
+		if t, err := time.Parse(time.DateOnly, value); err == nil {
+			return reflect.ValueOf(t)
+		}
+		return reflect.ValueOf(time.Time{})
+	})
 
 	var filter JobApplicationFilter
 	queryParams := r.URL.Query()
 	err = decoder.Decode(&filter, queryParams)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid query parameter: %v", err))
+		httpresponse.WriteError(
+			w,
+			http.StatusBadRequest,
+			fmt.Sprintf("invalid query parameter: %v", err),
+		)
 		return
 	}
 
@@ -189,13 +194,17 @@ func (h *handler) List(w http.ResponseWriter, r *http.Request) {
 	if queriedUserIDStr != "" {
 		queriedUserID, err := uuid.Parse(queriedUserIDStr)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid query parameter: %v", err))
+			httpresponse.WriteError(
+				w,
+				http.StatusBadRequest,
+				fmt.Sprintf("invalid query parameter: %v", err),
+			)
 			return
 		}
 
 		u, _ := user.FromContext(r.Context())
 		if !u.IsAdmin && u.ID != queriedUserID {
-			writeError(w, http.StatusForbidden, "forbidden")
+			httpresponse.WriteError(w, http.StatusForbidden, "forbidden")
 			return
 		}
 	}
@@ -206,17 +215,17 @@ func (h *handler) List(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, ErrJobApplicationInvalidInput) {
 			apps, err = h.service.List(r.Context(), JobApplicationFilter{})
 			if err != nil {
-				writeError(w, http.StatusInternalServerError, "internal error")
+				httpresponse.WriteError(w, http.StatusInternalServerError, "internal error")
 				return
 			}
-			writeJSON(w, http.StatusOK, apps)
+			httpresponse.WriteJSON(w, http.StatusOK, apps)
 			return
 		}
-		writeJSON(w, http.StatusInternalServerError, "internal error")
+		httpresponse.WriteJSON(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, apps)
+	httpresponse.WriteJSON(w, http.StatusOK, apps)
 }
 
 func authenticatedUserID(ctx context.Context) (*uuid.UUID, error) {
@@ -225,19 +234,4 @@ func authenticatedUserID(ctx context.Context) (*uuid.UUID, error) {
 		return nil, user.ErrUserNotFoundInCtx
 	}
 	return &u.ID, nil
-}
-
-func writeError(w http.ResponseWriter, statusCode int, message string) {
-	http.Error(w, message, statusCode)
-}
-
-func writeJSON(w http.ResponseWriter, statusCode int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	err := json.NewEncoder(w).Encode(struct {
-		Data any `json:"data"`
-	}{Data: v})
-	if err != nil {
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-	}
 }

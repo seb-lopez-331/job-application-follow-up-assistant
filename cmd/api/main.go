@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgxpool"	
+	"github.com/jackc/pgx/v5/pgxpool"
 
-	"job-application-follow-up-assistant/internal/jobapplication"
-	"job-application-follow-up-assistant/internal/httpapi"
+	"github.com/seb-lopez-331/job-application-follow-up-assistant/internal/httpapi"
+	"github.com/seb-lopez-331/job-application-follow-up-assistant/internal/jobapplication"
 )
 
 func main() {
@@ -40,21 +40,21 @@ func main() {
 	// Wire dependencies
 	repo := jobapplication.NewPostgresRepository(db)
 	service := jobapplication.NewService(repo)
-	handler := application.NewHandler(service)
+	handler := jobapplication.NewHandler(service)
 
 	// Build the HTTP router
 	router := chi.NewRouter()
 	httpapi.RegisterRoutes(router, handler)
 
 	server := &http.Server{
-		Addr:				":8080",
-		Handler:			router,
-		ReadHeaderTimeout: 	5 * time.Second,
+		Addr:              ":8080",
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	log.Printf("API listening on %s", server.Addr)
 	if err := server.ListenAndServe(); err != nil &&
-		err !- http.ErrServerClosed {
+		err != http.ErrServerClosed {
 		log.Fatalf("run HTTP server: %v", err)
 	}
 }
