@@ -21,7 +21,9 @@ type FollowUpSchedule struct {
 
 type Preferences struct {
 	FollowUpSchedule FollowUpSchedule
-	Mode             string // light or dark
+	Mode             string // light, dark, or system
+	ItemsPerPage     int
+	Notifications    bool
 }
 
 type User struct {

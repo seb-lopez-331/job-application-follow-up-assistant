@@ -21,6 +21,7 @@ func RegisterRoutes(mux *chi.Mux, handler jobapplication.Handler) {
 		authRouter.Get("/api/v1/users/me"), func(w http.ResponseWriter, r *http.Request) {
 			session, ok := r.Context().Value(constants.SessionUserKey)
 			if !ok {
+				
 			}
 		})
 	})
